@@ -1,0 +1,34 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+silent: true
+
+tasks:
+  install:bun:
+    desc: "Install Bun."
+    run: once
+    cmds:
+      - curl -fsSL https://bun.sh/install | bash
+    status:
+      - command -v bun && exit 0 || exit 1
+
+  install:pip:
+    desc: "Install pip"
+    run: once
+    cmds:
+      - python3 -m ensurepip
+    status:
+      - python3 -m pip --version && exit 0 || exit 1
+
+  install:uv:
+    desc: "Install uv"
+    run: once
+    cmds:
+      - python3 -m pip install --user --quiet --no-progress uv
+    status:
+      - python3 -m pip show uv | grep -q "Version:" && exit 0 || exit 1
+  
+  generate_token:
+    desc: "Generates a base64 encoded token"
+    cmds:
+      - openssl rand -base64 {{default "32" .length}} | tr -d '\n'
