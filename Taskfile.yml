@@ -4,31 +4,54 @@ version: "3"
 silent: true
 
 tasks:
-  install:bun:
+  clean:
+    desc: "Clean up the project"
+    cmds:
+      - rm -rf debug/
+
+  bun:install:
     desc: "Install Bun."
     run: once
-    cmds:
-      - curl -fsSL https://bun.sh/install | bash
     status:
       - command -v bun && exit 0 || exit 1
+    cmds:
+      - curl -fsSL https://bun.sh/install | bash
 
-  install:pip:
+  pip:install:
     desc: "Install pip"
     run: once
-    cmds:
-      - python3 -m ensurepip
     status:
       - python3 -m pip --version && exit 0 || exit 1
+    cmds:
+      - python3 -m ensurepip
 
-  install:uv:
+  uv:install:
     desc: "Install uv"
     run: once
-    cmds:
-      - python3 -m pip install --user --quiet --no-progress uv
     status:
       - python3 -m pip show uv | grep -q "Version:" && exit 0 || exit 1
-  
-  generate_token:
+    cmds:
+      - python3 -m pip install --user --quiet --no-progress uv
+
+  openssl:rand:base64:
     desc: "Generates a base64 encoded token"
     cmds:
       - openssl rand -base64 {{default "32" .length}} | tr -d '\n'
+
+  hadolint:install:
+    desc: Install hadolint
+    status:
+      - command -v hadolint
+    cmds:
+      - sudo curl -fsSL https://github.com/hadolint/hadolint/releases/download/v2.12.0/hadolint-Linux-x86_64 -o /usr/local/bin/hadolint
+      - sudo chown root:root /usr/local/bin/hadolint
+      - sudo chmod +x /usr/local/bin/hadolint
+      - /usr/local/bin/hadolint --version
+
+  k3s:install:
+    desc: Install k3s
+    status:
+      - command -v k3s
+    cmds:
+      - curl -sfL https://get.k3s.io | sh -
+      - sudo k3s kubectl get nodes
