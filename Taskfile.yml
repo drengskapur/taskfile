@@ -13,7 +13,7 @@ tasks:
     desc: "Install Bun."
     run: once
     status:
-      - command -v bun && exit 0 || exit 1
+      - command -v bun >/dev/null 2>&1
     cmds:
       - curl -fsSL https://bun.sh/install | bash
 
@@ -21,7 +21,7 @@ tasks:
     desc: "Install pip"
     run: once
     status:
-      - python3 -m pip --version && exit 0 || exit 1
+      - python3 -m pip --version >/dev/null 2>&1
     cmds:
       - python3 -m ensurepip
 
@@ -29,7 +29,7 @@ tasks:
     desc: "Install uv"
     run: once
     status:
-      - python3 -m pip show uv | grep -q "Version:" && exit 0 || exit 1
+      - python3 -m pip show uv >/dev/null 2>&1
     cmds:
       - python3 -m pip install --user --quiet --no-progress uv
 
@@ -39,19 +39,173 @@ tasks:
       - openssl rand -base64 {{default "32" .length}} | tr -d '\n'
 
   hadolint:install:
-    desc: Install hadolint
+    desc: "Install hadolint"
+    run: once
     status:
-      - command -v hadolint
+      - command -v hadolint >/dev/null 2>&1
     cmds:
       - sudo curl -fsSL https://github.com/hadolint/hadolint/releases/download/v2.12.0/hadolint-Linux-x86_64 -o /usr/local/bin/hadolint
       - sudo chown root:root /usr/local/bin/hadolint
       - sudo chmod +x /usr/local/bin/hadolint
-      - /usr/local/bin/hadolint --version
+      - hadolint --version
 
   k3s:install:
-    desc: Install k3s
+    desc: "Install k3s"
+    run: once
     status:
-      - command -v k3s
+      - command -v k3s >/dev/null 2>&1
     cmds:
       - curl -sfL https://get.k3s.io | sh -
       - sudo k3s kubectl get nodes
+
+  rclone:install:
+    desc: "Install rclone"
+    run: once
+    status:
+      - command -v rclone >/dev/null 2>&1
+    cmds:
+      - curl https://rclone.org/install.sh | sudo bash
+      - rclone version
+
+  rclone:selfupdate:
+    desc: "Self-update rclone to the latest version"
+    run: once
+    status:
+      - rclone selfupdate | grep -q "rclone version"
+    cmds:
+      - rclone selfupdate
+      - echo "rclone has been updated to the latest version."
+
+  fuse:install:
+    desc: "Install FUSE (required by rclone)"
+    run: once
+    status:
+      - command -v fusermount >/dev/null 2>&1
+    cmds:
+      - sudo apt update
+      - sudo apt install -y fuse
+
+  rclone:configure-pcloud:
+    desc: "Configure rclone remote for pCloud using environment variables"
+    run: once
+    status:
+      - |
+        "[ -f "$HOME/.config/rclone/rclone.conf" ] && grep -q "\[pcloud-remote\]" "$HOME/.config/rclone/rclone.conf"
+    cmds:
+      - mkdir -p "$HOME/.config/rclone"
+      - |
+        cat <<EOF > "$HOME/.config/rclone/rclone.conf"
+        [pcloud-remote]
+        type = pcloud
+        token = {"access_token":"$PCLOUD_ACCESS_TOKEN","token_type":"Bearer","refresh_token":"$PCLOUD_REFRESH_TOKEN","expiry":"$PCLOUD_EXPIRY"}
+        EOF
+      - chmod 600 "$HOME/.config/rclone/rclone.conf"
+      - echo "Configured pCloud remote in rclone."
+
+  rclone:mount:
+    desc: "Mount pCloud using rclone in WSL"
+    deps:
+      - rclone:install
+      - fuse:install
+      - rclone:configure-pcloud
+      - rclone:create-log-dir
+      - rclone:create-mount-point
+      - rclone:mount-command
+      - rclone:verify-mount
+
+  rclone:create-log-dir:
+    desc: "Create log directory if it doesn't exist"
+    run: once
+    status:
+      - |
+        [ -d "$HOME/rclone-logs" ]
+    cmds:
+      - mkdir -p "$HOME/rclone-logs"
+      - echo "Created log directory at $HOME/rclone-logs."
+
+  rclone:create-mount-point:
+    desc: "Create mount point if it doesn't exist"
+    run: once
+    status:
+      - |
+        [ -d "/mnt/pcloud_mount" ]
+    cmds:
+      - sudo mkdir -p /mnt/pcloud_mount
+      - echo "Created mount point at /mnt/pcloud_mount."
+
+  rclone:mount-command:
+    desc: "Execute rclone mount command"
+    run: once
+    status:
+      - mount | grep -q "/mnt/pcloud_mount"
+    cmds:
+      - echo "Mounting pCloud at /mnt/pcloud_mount..."
+      - sudo nohup rclone mount \
+        "pcloud-remote:Movies" \
+        "/mnt/pcloud_mount" \
+        --vfs-cache-mode=reads --read-only \
+        --allow-other \
+        --daemon >> "$HOME/rclone-logs/rclone.log" 2>&1 &
+      - echo "$!" > "$HOME/rclone-logs/rclone_pid.txt"
+      - echo "Started rclone mount with PID $(cat $HOME/rclone-logs/rclone_pid.txt)."
+
+  rclone:verify-mount:
+    desc: "Verify if pCloud was successfully mounted"
+    run: once
+    cmds:
+      - sleep 5
+      - |
+        if mount | grep -q "/mnt/pcloud_mount"; then
+          echo "pCloud successfully mounted at /mnt/pcloud_mount."
+          echo "Access this location in Windows using \\\\wsl$\\<Your_Linux_Distribution_Name>\\mnt\\pcloud_mount"
+        else
+          echo "ERROR: rclone mount failed, please check $HOME/rclone-logs/rclone.log"
+          exit 1
+        fi
+
+  rclone:unmount:
+    desc: "Unmount pCloud using rclone"
+    run: once
+    status:
+      - mount | grep -q "/mnt/pcloud_mount"
+    cmds:
+      - echo "Unmounting pCloud from /mnt/pcloud_mount..."
+      - sudo umount /mnt/pcloud_mount
+      - rm -f "$HOME/rclone-logs/rclone_pid.txt"
+      - echo "pCloud has been unmounted."
+
+  rclone:cleanup-logs:
+    desc: "Clean up old rclone logs"
+    run: once
+    cmds:
+      - find "$HOME/rclone-logs" -type f -mtime +30 -name "*.log" -exec rm {} \;
+      - echo "Cleaned up logs older than 30 days."
+
+  rclone:setup-systemd-service:
+    desc: "Set up systemd service for automatic rclone mount on WSL startup"
+    run: once
+    status:
+      - |
+        [ -f "/etc/systemd/system/rclone-pcloud.service" ]
+    cmds:
+      - |
+        sudo tee /etc/systemd/system/rclone-pcloud.service > /dev/null <<EOF
+        [Unit]
+        Description=Rclone Mount for pCloud
+        After=network-online.target
+        Wants=network-online.target
+
+        [Service]
+        Type=simple
+        ExecStart=/usr/bin/rclone mount pcloud-remote:Movies /mnt/pcloud_mount --vfs-cache-mode=reads --read-only --allow-other
+        ExecStop=/bin/fusermount -u /mnt/pcloud_mount
+        Restart=on-failure
+        User=$(whoami)
+
+        [Install]
+        WantedBy=default.target
+        EOF
+      - sudo systemctl daemon-reload
+      - sudo systemctl enable rclone-pcloud.service
+      - sudo systemctl start rclone-pcloud.service
+      - echo "Systemd service for rclone-pcloud has been set up and started."
