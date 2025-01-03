@@ -210,7 +210,53 @@ tasks:
       - sudo systemctl start rclone-pcloud.service
       - echo "Systemd service for rclone-pcloud has been set up and started."
 
-  install:aws-cli:
+  install-terraform:
+    desc: "Install terraform"
+    run: once
+    deps:
+      - task: install-jq
+    vars:
+      LATEST_VERSION:
+        sh: curl -s https://api.github.com/repos/hashicorp/terraform/releases/latest | jq -r '.tag_name | ltrimstr("v")'
+    cmds:
+      - defer: rm -f terraform_{{.LATEST_VERSION}}_linux_amd64.zip
+      - defer: rm -f LICENSE.txt
+      - |
+        curl -LO "https://releases.hashicorp.com/terraform/{{.LATEST_VERSION}}/terraform_{{.LATEST_VERSION}}_linux_amd64.zip"
+        unzip -qO terraform_{{.LATEST_VERSION}}_linux_amd64.zip
+        sudo mv terraform /usr/local/bin/terraform
+        sudo chown root:root /usr/local/bin/terraform
+        sudo chmod +x /usr/local/bin/terraform
+    status:
+      - command -v terraform
+
+  install-terraform-ls:
+    desc: "Install Terraform Language Server (terraform-ls)"
+    run: once
+    deps:
+      - task: install-jq
+    vars:
+      LATEST_VERSION:
+        sh: curl -s https://api.github.com/repos/hashicorp/terraform-ls/releases/latest | jq -r '.tag_name | ltrimstr("v")'
+    cmds:
+      - defer: rm -f terraform-ls_{{.LATEST_VERSION}}_linux_amd64.zip
+      - defer: rm -f LICENSE.txt
+      - >-
+        curl -LO "https://releases.hashicorp.com/terraform-ls/{{.LATEST_VERSION}}/terraform-ls_{{.LATEST_VERSION}}_linux_amd64.zip"
+        unzip -qO terraform-ls_{{.LATEST_VERSION}}_linux_amd64.zip
+        sudo mv terraform-ls /usr/local/bin/terraform-ls
+        sudo chown root:root /usr/local/bin/terraform-ls
+        sudo chmod +x /usr/local/bin/terraform-ls
+    status:
+      - command -v terraform-ls
+
+  start-terraform-ls:
+    desc: "Start Terraform Language Server (terraform-ls)"
+    run: once
+    cmds:
+      - terraform-ls serve
+
+  install-aws:
     desc: "Install aws-cli"
     run: once
     cmds:
@@ -218,11 +264,37 @@ tasks:
       - defer: rm -rf aws
       - |
         sudo rm -rf /usr/local/aws-cli
-        curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-        unzip awscliv2.zip
-        sudo ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update
+        curl -so "awscliv2.zip" "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"
+        unzip -qo awscliv2.zip
+        sudo ./aws/install -b /usr/local/bin -i /usr/local/aws-cli -u >/dev/null 2>&1
         sudo chown root:root /usr/local/bin/aws
         sudo chmod +x /usr/local/bin/aws
-        /usr/local/bin/aws --version
     status:
       - command -v aws
+
+  install-jq:
+    desc: "Install jq"
+    run: once
+    vars:
+      LATEST_VERSION:
+        sh: |
+          curl -s https://api.github.com/repos/jqlang/jq/releases/latest | grep '"tag_name":' | sed -E 's/.*"tag_name": "jq-([^"]+)".*/\1/'
+      DOWNLOAD_URL: "https://github.com/jqlang/jq/releases/download/jq-{{.LATEST_VERSION}}/jq-linux64"
+    cmds:
+      - defer: rm -f jq-linux64
+      - >-
+        curl -sLO "{{.DOWNLOAD_URL}}"
+        sudo mv jq-linux64 /usr/local/bin/jq
+        sudo chown root:root /usr/local/bin/jq
+        sudo chmod +x /usr/local/bin/jq
+    status:
+      - command -v jq
+
+  install-combine:
+    desc: "Install combine"
+    run: once
+    cmds:
+      - >-
+        sudo install -m 755 -o root -g root /workspaces/infrastructure/binaries/combine.sh /usr/bin/combine
+    status:
+      - command -v combine
