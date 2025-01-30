@@ -1,0 +1,44 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+tasks:
+  default:
+    silent: true
+    cmd: task --list
+
+  setup-python:
+    desc: "Setup Python Dev Environment"
+    run: once
+    cmds:
+      - sudo apt update
+      - task: install:python
+      - task: install:uv
+
+  install:python:
+    desc: "Install Python"
+    internal: true
+    run: once
+    status:
+      - command -v python3 >/dev/null 2>&1
+      - command -v pip3 >/dev/null 2>&1
+    cmds:
+      - sudo apt install -y python3
+      - python3 -m ensurepip
+
+  install:uv:
+    desc: "Install uv"
+    run: once
+    status:
+      - command -v uv >/dev/null 2>&1
+    env:
+      UV_INSTALL_DIR: "/usr/local/bin"
+    cmds:
+      - curl -LsSf https://astral.sh/uv/install.sh | sh
+
+  install:bun:
+    desc: "Install bun"
+    run: once
+    status:
+      - command -v bun >/dev/null 2>&1
+    cmds:
+      - curl -fsSL https://bun.sh/install | bash
