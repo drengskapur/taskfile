@@ -34,3 +34,9 @@ tasks:
       - sudo mv doctl /usr/local/bin/doctl
       - sudo chown root:root /usr/local/bin/doctl
       - sudo chmod +x /usr/local/bin/doctl
+
+  debug:cloudinit:
+    desc: "Debug Cloud Init"
+    run: once
+    cmds:
+      - cat /var/log/cloud-init-output.log | grep userdata

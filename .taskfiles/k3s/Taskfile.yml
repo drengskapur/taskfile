@@ -7,7 +7,7 @@ tasks:
     deps:
       - preconfigure
     cmds:
-      - task install
+      - task: install
 
   preconfigure:
     desc: "Preconfigure system for K3s installation"
@@ -15,7 +15,7 @@ tasks:
     deps:
       - update-system
     cmds:
-      - task install-dependencies
+      - task: install-dependencies
 
   update-system:
     desc: "Update package lists and upgrade existing packages"
@@ -34,7 +34,7 @@ tasks:
       - command -v ufw >/dev/null 2>&1
     cmds:
       - sudo apt-get install -y curl ufw
-      - task disable-ufw
+      - task: disable-ufw
 
   disable-ufw:
     desc: "Disable UFW firewall temporarily"
@@ -44,7 +44,7 @@ tasks:
     cmds:
       - sudo ufw disable
       - echo "UFW has been disabled temporarily."
-      - task ensure-unique-hostname
+      - task: ensure-unique-hostname
 
   disable-swap:
     desc: "Disable swap on the system"
@@ -103,7 +103,7 @@ tasks:
       - sudo systemctl start k3s
       - sudo chmod 644 /etc/rancher/k3s/k3s.yaml
       - echo "K3s installed and started."
-      - task setup-kubectl
+      - task: setup-kubectl
 
   setup-kubectl:
     desc: "Configure kubectl to access K3s cluster"
@@ -123,7 +123,7 @@ tasks:
       - install
     cmds:
       - echo "K3s installation completed successfully."
-      - task setup-kubectl
+      - task: setup-kubectl
 
   uninstall:
     desc: "Uninstall K3s from the system"
