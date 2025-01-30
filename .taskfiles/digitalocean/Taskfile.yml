@@ -7,6 +7,7 @@ tasks:
     desc: "Install All Dependencies"
     deps:
       - task: install:metrics-agent
+      - task: install:doctl
 
   install:metrics-agent:
     desc: "Install Metrics Agent"
@@ -14,3 +15,21 @@ tasks:
       - defer: rm install.sh
       - curl -sSLO https://repos.insights.digitalocean.com/install.sh
       - sudo bash install.sh
+
+  install:doctl:
+    desc: "Install doctl"
+    run: once
+    status:
+      - command -v doctl >/dev/null 2>&1
+    vars:
+      LATEST_VERSION:
+        sh: |
+          curl -s https://api.github.com/repos/digitalocean/doctl/releases/latest | grep '"tag_name":' | sed -E 's/.*"tag_name": "v([^"]+)".*/\1/'
+      DOWNLOAD_URL: "https://github.com/digitalocean/doctl/releases/download/v{{.LATEST_VERSION}}/doctl-{{.LATEST_VERSION}}-linux-amd64.tar.gz"
+    cmds:
+      - defer: rm -f doctl-{{.LATEST_VERSION}}-linux-amd64.tar.gz
+      - curl -sLO "{{.DOWNLOAD_URL}}"
+      - tar -xzf doctl-{{.LATEST_VERSION}}-linux-amd64.tar.gz
+      - sudo mv doctl /usr/local/bin/doctl
+      - sudo chown root:root /usr/local/bin/doctl
+      - sudo chmod +x /usr/local/bin/doctl
