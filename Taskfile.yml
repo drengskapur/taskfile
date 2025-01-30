@@ -5,19 +5,12 @@ version: "3"
 set: [pipefail]
 shopt: [globstar]
 
-# vars:
-#   VARIABLE: value
-
-# dotenv:
-#   - .env
-
-# env:
-#   ENVIRONMENT_VARIABLE: "{{.VARIABLE}}/folder"
-
 includes:
   aws: .taskfiles/aws
+  bun: .taskfiles/bun
   digitalocean: .taskfiles/digitalocean
   docker: .taskfiles/docker
+  helm: .taskfiles/helm
   hadolint: .taskfiles/hadolint
   k3s: .taskfiles/k3s
   mix: .taskfiles/mix
