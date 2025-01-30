@@ -16,14 +16,15 @@ shopt: [globstar]
 
 includes:
   aws: .taskfiles/aws
-  dev: .taskfiles/dev
   digitalocean: .taskfiles/digitalocean
   docker: .taskfiles/docker
   hadolint: .taskfiles/hadolint
   k3s: .taskfiles/k3s
   mix: .taskfiles/mix
+  python3: .taskfiles/python3
   rclone: .taskfiles/rclone
   terraform: .taskfiles/terraform
+  uv: .taskfiles/uv
 
 tasks:
   default:

@@ -1,0 +1,13 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+tasks:
+  install:
+    desc: "Install uv"
+    run: once
+    status:
+      - command -v uv >/dev/null 2>&1
+    env:
+      UV_INSTALL_DIR: "/usr/local/bin"
+    cmds:
+      - curl -LsSf https://astral.sh/uv/install.sh | sh

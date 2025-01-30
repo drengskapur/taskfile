@@ -1,0 +1,11 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+tasks:
+  install:
+    desc: "Install bun"
+    run: once
+    status:
+      - command -v bun >/dev/null 2>&1
+    cmds:
+      - curl -fsSL https://bun.sh/install | bash

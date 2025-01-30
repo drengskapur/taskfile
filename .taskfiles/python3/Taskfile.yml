@@ -1,0 +1,13 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+tasks:
+  install:
+    desc: "Install Python3"
+    run: once
+    status:
+      - command -v python3 >/dev/null 2>&1
+      - command -v pip3 >/dev/null 2>&1
+    cmds:
+      - sudo apt install -y python3
+      - python3 -m ensurepip
