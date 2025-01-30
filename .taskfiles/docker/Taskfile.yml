@@ -7,7 +7,7 @@ tasks:
     desc: "Install Docker"
     run: once
     status:
-      - command -v docker
+      - command -v docker >/dev/null 2>&1
     vars:
       USER:
         sh: whoami
@@ -16,3 +16,21 @@ tasks:
       - sudo usermod -aG docker "{{.USER}}"
       - sudo systemctl enable docker
       - sudo systemctl start docker
+
+  install:hadolint:
+    desc: "Install hadolint"
+    run: once
+    status:
+      - command -v hadolint >/dev/null 2>&1
+    vars:
+      LATEST_VERSION:
+        sh: |
+          curl -s https://api.github.com/repos/hadolint/hadolint/releases/latest | grep '"tag_name":' | sed -E 's/.*"tag_name": "v([^"]+)".*/\1/'
+      DOWNLOAD_URL: "https://github.com/hadolint/hadolint/releases/download/v{{.LATEST_VERSION}}/hadolint-Linux-x86_64"
+    cmds:
+      - defer: rm -f hadolint-Linux-x86_64
+      - >-
+        curl -sLO "{{.DOWNLOAD_URL}}"
+        sudo mv hadolint-Linux-x86_64 /usr/local/bin/hadolint
+        sudo chown root:root /usr/local/bin/hadolint
+        sudo chmod +x /usr/local/bin/hadolint

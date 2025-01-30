@@ -1,0 +1,69 @@
+---
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+tasks:
+  install:
+    desc: "Install terraform"
+    run: once
+    deps:
+      - task: install:jq
+    vars:
+      LATEST_VERSION:
+        sh: curl -s https://api.github.com/repos/hashicorp/terraform/releases/latest | jq -r '.tag_name | ltrimstr("v")'
+    cmds:
+      - defer: rm -f terraform_{{.LATEST_VERSION}}_linux_amd64.zip
+      - defer: rm -f LICENSE.txt
+      - |
+        curl -LO "https://releases.hashicorp.com/terraform/{{.LATEST_VERSION}}/terraform_{{.LATEST_VERSION}}_linux_amd64.zip"
+        unzip -qO terraform_{{.LATEST_VERSION}}_linux_amd64.zip
+        sudo mv terraform /usr/local/bin/terraform
+        sudo chown root:root /usr/local/bin/terraform
+        sudo chmod +x /usr/local/bin/terraform
+    status:
+      - command -v terraform
+
+  install:ls:
+    desc: "Install Terraform Language Server (terraform-ls)"
+    run: once
+    deps:
+      - task: install-jq
+    vars:
+      LATEST_VERSION:
+        sh: curl -s https://api.github.com/repos/hashicorp/terraform-ls/releases/latest | jq -r '.tag_name | ltrimstr("v")'
+    cmds:
+      - defer: rm -f terraform-ls_{{.LATEST_VERSION}}_linux_amd64.zip
+      - defer: rm -f LICENSE.txt
+      - >-
+        curl -LO "https://releases.hashicorp.com/terraform-ls/{{.LATEST_VERSION}}/terraform-ls_{{.LATEST_VERSION}}_linux_amd64.zip"
+        unzip -qO terraform-ls_{{.LATEST_VERSION}}_linux_amd64.zip
+        sudo mv terraform-ls /usr/local/bin/terraform-ls
+        sudo chown root:root /usr/local/bin/terraform-ls
+        sudo chmod +x /usr/local/bin/terraform-ls
+    status:
+      - command -v terraform-ls
+
+  start:ls:
+    desc: "Start Terraform Language Server (terraform-ls)"
+    run: once
+    cmds:
+      - terraform-ls serve
+
+  install:jq:
+    desc: "Install jq"
+    internal: true
+    run: once
+    vars:
+      LATEST_VERSION:
+        sh: |
+          curl -s https://api.github.com/repos/jqlang/jq/releases/latest | grep '"tag_name":' | sed -E 's/.*"tag_name": "jq-([^"]+)".*/\1/'
+      DOWNLOAD_URL: "https://github.com/jqlang/jq/releases/download/jq-{{.LATEST_VERSION}}/jq-linux64"
+    cmds:
+      - defer: rm -f jq-linux64
+      - >-
+        curl -sLO "{{.DOWNLOAD_URL}}"
+        sudo mv jq-linux64 /usr/local/bin/jq
+        sudo chown root:root /usr/local/bin/jq
+        sudo chmod +x /usr/local/bin/jq
+    status:
+      - command -v jq

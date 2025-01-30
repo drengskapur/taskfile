@@ -1,0 +1,134 @@
+---
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+tasks:
+  install:
+    desc: "Install Erlang and Elixir"
+    silent: false
+    vars:
+      HOME:
+        sh: echo $HOME
+      LATEST_OTP_VERSION:
+        sh: curl -s https://api.github.com/repos/erlang/otp/releases | jq -r '.[0] | .tag_name' | awk -F'-' '{print $2}'
+      LATEST_OTP_MAJOR_VERSION:
+        sh: echo {{.LATEST_OTP_VERSION}} | awk -F'.' '{print $1}'
+      LATEST_ELIXIR_VERSION:
+        sh: curl -s https://api.github.com/repos/elixir-lang/elixir/releases | jq -r '.[].tag_name | select(test("^v[0-9]+\\.[0-9]+\\.[0-9]+$")) | sub("^v"; "")' | head -n 1
+      ELIXIR_PATH: "export PATH=$HOME/.elixir-install/installs/elixir/{{.LATEST_ELIXIR_VERSION}}-otp-{{.LATEST_OTP_MAJOR_VERSION}}/bin:$PATH"
+      OTP_PATH: "export PATH=$HOME/.elixir-install/installs/otp/{{.LATEST_OTP_VERSION}}/bin:$PATH"
+    cmds:
+      - defer: rm -f install.sh
+      - curl -fsSLO https://raw.githubusercontent.com/elixir-lang/elixir-lang.github.com/main/install.sh -o install.sh
+      - chmod +x install.sh
+      - ./install.sh elixir@latest otp@latest
+      - |
+        if ! grep -q "{{.ELIXIR_PATH}}" "$HOME/.bashrc"; then
+          echo '{{.ELIXIR_PATH}}' >> "$HOME/.bashrc"
+          export PATH=$HOME/.elixir-install/installs/elixir/{{.LATEST_ELIXIR_VERSION}}-otp-{{.LATEST_OTP_MAJOR_VERSION}}/bin:$PATH
+        fi
+      - |
+        if ! grep -q "{{.OTP_PATH}}" "$HOME/.bashrc"; then
+          echo '{{.OTP_PATH}}' >> "$HOME/.bashrc"
+          export PATH=$HOME/.elixir-install/installs/otp/{{.LATEST_OTP_VERSION}}/bin:$PATH
+        fi
+    status:
+      - command -v ~/.elixir-install/installs/elixir/{{.LATEST_ELIXIR_VERSION}}-otp-{{.LATEST_OTP_MAJOR_VERSION}}/bin/elixir
+      - command -v ~/.elixir-install/installs/otp/{{.LATEST_OTP_VERSION}}/bin/erl
+
+  erlang:
+    desc: "Install Erlang"
+    run: once
+    vars:
+      HOME:
+        sh: echo $HOME
+      LATEST_OTP_VERSION:
+        sh: >
+          curl -s https://api.github.com/repos/erlang/otp/releases |
+          jq -r '.[0] | .tag_name' | awk -F'-' '{print $2}'
+      LATEST_OTP_MAJOR_VERSION:
+        sh: echo "{{.LATEST_OTP_VERSION}}" | awk -F'.' '{print $1}'
+      OTP_PATH: "export PATH={{.HOME}}/.elixir-install/installs/otp/{{.LATEST_OTP_VERSION}}/bin:$PATH"
+    cmds:
+      - defer: rm -f install.sh
+      - curl -fsSLO https://raw.githubusercontent.com/elixir-lang/elixir-lang.github.com/main/install.sh
+      - chmod +x install.sh
+      - ./install.sh otp@latest
+      - |
+        if ! grep -q "{{.OTP_PATH}}" "{{.HOME}}/.bashrc"; then
+          echo '{{.OTP_PATH}}' >> "{{.HOME}}/.bashrc"
+          export PATH={{.HOME}}/.elixir-install/installs/otp/{{.LATEST_OTP_VERSION}}/bin:$PATH
+        fi
+    status:
+      - command -v "{{.HOME}}/.elixir-install/installs/otp/{{.LATEST_OTP_VERSION}}/bin/erl"
+
+  elixir:
+    desc: "Install Elixir"
+    run: once
+    deps:
+      - task: erlang
+    vars:
+      HOME:
+        sh: echo $HOME
+      LATEST_ELIXIR_VERSION:
+        sh: >
+          curl -s https://api.github.com/repos/elixir-lang/elixir/releases |
+          jq -r '.[].tag_name | select(test("^v[0-9]+\\.[0-9]+\\.[0-9]+$")) |
+          sub("^v"; "")' |
+          head -n 1
+      LATEST_OTP_MAJOR_VERSION:
+        sh: echo "{{erlang.LATEST_OTP_VERSION}}" | awk -F'.' '{print $1}'
+      ELIXIR_PATH: "export PATH={{.HOME}}/.elixir-install/installs/elixir/{{.LATEST_ELIXIR_VERSION}}-otp-{{.LATEST_OTP_MAJOR_VERSION}}/bin:$PATH"
+    cmds:
+      - defer: rm -f install.sh
+      - curl -fsSLO https://raw.githubusercontent.com/elixir-lang/elixir-lang.github.com/main/install.sh
+      - chmod +x install.sh
+      - ./install.sh elixir@latest
+      - |
+        if ! grep -q "{{.ELIXIR_PATH}}" "{{.HOME}}/.bashrc"; then
+          echo '{{.ELIXIR_PATH}}' >> "{{.HOME}}/.bashrc"
+          export PATH={{.HOME}}/.elixir-install/installs/elixir/{{.LATEST_ELIXIR_VERSION}}-otp-{{.LATEST_OTP_MAJOR_VERSION}}/bin:$PATH
+        fi
+    status:
+      - command -v "{{.HOME}}/.elixir-install/installs/elixir/{{.LATEST_ELIXIR_VERSION}}-otp-{{.LATEST_OTP_MAJOR_VERSION}}/bin/elixir"
+
+  dev:
+    desc: "Run development server"
+    silent: false
+    cmds:
+      - mix deps.get
+      - mix clean
+      - mix compile
+      - mix phx.server
+
+  test:
+    desc: "Run tests"
+    silent: false
+    aliases:
+      - test
+    cmds:
+      - mix test
+
+  deps:
+    desc: "Install dependencies"
+    silent: false
+    cmds:
+      - mix deps.get
+
+  compile:
+    desc: "Compile project"
+    silent: false
+    cmds:
+      - mix compile
+
+  format:
+    desc: "Format code"
+    silent: false
+    cmds:
+      - mix format
+
+  clean:
+    desc: "Clean project"
+    silent: false
+    cmds:
+      - mix clean

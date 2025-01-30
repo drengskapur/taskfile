@@ -1,0 +1,31 @@
+---
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+tasks:
+  install:
+    desc: "Install rclone"
+    run: once
+    status:
+      - command -v rclone >/dev/null 2>&1
+    cmds:
+      - curl https://rclone.org/install.sh | sudo bash
+      - rclone version
+
+  selfupdate:
+    desc: "Self-update rclone to the latest version"
+    run: once
+    status:
+      - rclone selfupdate | grep -q "rclone version"
+    cmds:
+      - rclone selfupdate
+      - echo "rclone has been updated to the latest version."
+
+  fuse:install:
+    desc: "Install FUSE (required by rclone)"
+    run: once
+    status:
+      - command -v fusermount >/dev/null 2>&1
+    cmds:
+      - sudo apt update
+      - sudo apt install -y fuse

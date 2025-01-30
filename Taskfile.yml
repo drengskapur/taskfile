@@ -15,10 +15,14 @@ shopt: [globstar]
 #   ENVIRONMENT_VARIABLE: "{{.VARIABLE}}/folder"
 
 includes:
-  install: .taskfiles/install
-  docker: .taskfiles/docker
-  k3s: .taskfiles/k3s
+  aws: .taskfiles/aws
   digitalocean: .taskfiles/digitalocean
+  docker: .taskfiles/docker
+  install: .taskfiles/install
+  k3s: .taskfiles/k3s
+  mix: .taskfiles/mix
+  rclone: .taskfiles/rclone
+  terraform: .taskfiles/terraform
 
 tasks:
   default:

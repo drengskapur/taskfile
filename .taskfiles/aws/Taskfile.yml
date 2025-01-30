@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+silent: true
+
+tasks:
+  install:
+    desc: "Install aws-cli"
+    run: once
+    status:
+      - command -v aws >/dev/null 2>&1
+    cmds:
+      - defer: rm -f awscliv2.zip
+      - defer: rm -rf aws
+      - |
+        sudo rm -rf /usr/local/aws-cli
+        curl -so "awscliv2.zip" "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"
+        unzip -qo awscliv2.zip
+        sudo ./aws/install -b /usr/local/bin -i /usr/local/aws-cli -u >/dev/null 2>&1
+        sudo chown root:root /usr/local/bin/aws
+        sudo chmod +x /usr/local/bin/aws
