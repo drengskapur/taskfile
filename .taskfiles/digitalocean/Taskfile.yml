@@ -11,6 +11,7 @@ tasks:
 
   install:metrics-agent:
     desc: "Install Metrics Agent"
+    run: once
     cmds:
       - defer: rm install.sh
       - curl -sSLO https://repos.insights.digitalocean.com/install.sh
