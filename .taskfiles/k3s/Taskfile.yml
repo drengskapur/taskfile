@@ -1,134 +1,98 @@
 # yaml-language-server: $schema=https://taskfile.dev/schema.json
 version: "3"
 
+vars:
+  HOME:
+    sh: echo $HOME
+  KUBECONFIG: "{{.HOME}}/.kube/config"
+  K3S_YAML: /etc/rancher/k3s/k3s.yaml
+
 tasks:
-  setup:
-    desc: "Preconfigure system and install K3s"
-    deps:
-      - preconfigure
+  default:
+    desc: "Install K3s with all prerequisites"
     cmds:
+      - task: setup
+
+  setup:
+    desc: "Install K3s with system preconfiguration"
+    cmds:
+      - task: preconfigure
       - task: install
 
   preconfigure:
-    desc: "Preconfigure system for K3s installation"
+    desc: "Configure system prerequisites"
     run: once
-    deps:
-      - update-system
     cmds:
-      - task: install-dependencies
+      - task: update-system
+      - task: configure-system
 
   update-system:
-    desc: "Update package lists and upgrade existing packages"
-    run: always
+    desc: "Update and upgrade system packages"
     cmds:
       - sudo apt-get update -y
       - sudo apt-get upgrade -y
 
-  install-dependencies:
-    desc: "Install required dependencies for K3s"
+  configure-system:
+    desc: "Configure system settings for K3s"
     run: once
-    deps:
-      - disable-ufw
+    cmds:
+      - task: install-deps
+      - task: disable-swap
+      - task: configure-firewall
+
+  install-deps:
+    desc: "Install required system dependencies"
     status:
-      - command -v curl >/dev/null 2>&1
-      - command -v ufw >/dev/null 2>&1
+      - which curl
+      - which ufw
     cmds:
       - sudo apt-get install -y curl ufw
-      - task: disable-ufw
-
-  disable-ufw:
-    desc: "Disable UFW firewall temporarily"
-    run: once
-    deps:
-      - disable-swap
-    cmds:
-      - sudo ufw disable
-      - echo "UFW has been disabled temporarily."
-      - task: ensure-unique-hostname
 
   disable-swap:
-    desc: "Disable swap on the system"
-    run: once
+    desc: "Disable system swap"
+    status:
+      - test "$(swapon --show)" = ""
     cmds:
       - sudo swapoff -a
-      - sudo sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
-      - echo "Swap has been disabled."
+      - sudo sed -i '/ swap / s/^/#/' /etc/fstab
 
-  ensure-unique-hostname:
-    desc: "Ensure each node has a unique hostname"
+  configure-firewall:
+    desc: "Configure UFW for K3s"
     run: once
-    status:
-      - command -v hostnamectl >/dev/null 2>&1
-    vars:
-      CURRENT_HOSTNAME:
-        sh: hostname
-      NEW_HOSTNAME: "k3s-node-{{ rand 1000 9999 }}"
     cmds:
       - |
-        if [ "{{.CURRENT_HOSTNAME}}" != "k3s-node-{{ rand 1000 9999 }}" ]; then
-          sudo hostnamectl set-hostname "{{.NEW_HOSTNAME}}"
-          echo "Hostname changed from {{.CURRENT_HOSTNAME}} to {{.NEW_HOSTNAME}}"
-        else
-          echo "Hostname is already set to {{.CURRENT_HOSTNAME}}"
-        fi
-      - task configure-ufw
-
-  configure-ufw:
-    desc: "Configure UFW firewall for K3s"
-    run: once
-    cmds:
-      # Kubernetes API Server
-      - sudo ufw allow 6443/tcp
-      - sudo ufw allow from 10.42.0.0/16 to any
-      - sudo ufw allow from 10.43.0.0/16 to any
-      # Flannel VXLAN
-      - sudo ufw allow 8472/udp
-      # Flannel WireGuard (IPv4)
-      - sudo ufw allow 51820/udp
-      # Flannel WireGuard (IPv6)
-      - sudo ufw allow 51821/udp
-      - sudo ufw enable
-      - echo "UFW has been configured for K3s."
+        sudo ufw allow 6443/tcp  # Kubernetes API
+        sudo ufw allow from 10.42.0.0/16  # Pod network
+        sudo ufw allow from 10.43.0.0/16  # Service network
+        sudo ufw allow 8472/udp  # Flannel VXLAN
+        sudo ufw allow 51820/udp # Flannel WireGuard (IPv4)
+        sudo ufw allow 51821/udp # Flannel WireGuard (IPv6)
+        sudo ufw --force enable
 
   install:
-    desc: "Install Lightweight Kubernetes (K3s)"
+    desc: "Install K3s"
     run: once
-    deps:
-      - disable-swap
     status:
-      - command -v k3s >/dev/null 2>&1
+      - which k3s
+    deps:
+      - configure-system
     cmds:
       - curl -sfL https://get.k3s.io | sudo sh -
-      - sudo systemctl enable k3s
-      - sudo systemctl start k3s
-      - sudo chmod 644 /etc/rancher/k3s/k3s.yaml
-      - echo "K3s installed and started."
+      - sudo systemctl enable --now k3s
+      - sudo chmod 644 {{.K3S_YAML}}
       - task: setup-kubectl
 
   setup-kubectl:
-    desc: "Configure kubectl to access K3s cluster"
+    desc: "Configure kubectl"
     run: once
-    deps:
-      - install
     cmds:
-      - mkdir -p ~/.kube
-      - sudo cp /etc/rancher/k3s/k3s.yaml ~/.kube/config
-      - sudo chown $(id -u):$(id -g) ~/.kube/config
-      - echo "KUBECONFIG set to ~/.kube/config"
-
-  post-install:
-    desc: "Post-installation steps for K3s"
-    run: once
-    deps:
-      - install
-    cmds:
-      - echo "K3s installation completed successfully."
-      - task: setup-kubectl
+      - mkdir -p $(dirname {{.KUBECONFIG}})
+      - sudo cp {{.K3S_YAML}} {{.KUBECONFIG}}
+      - sudo chown $(id -u):$(id -g) {{.KUBECONFIG}}
+      - sudo chmod 600 {{.KUBECONFIG}}
 
   uninstall:
-    desc: "Uninstall K3s from the system"
-    run: once
+    desc: "Remove K3s and cleanup"
     cmds:
-      - sudo /usr/local/bin/k3s-uninstall.sh
-      - sudo rm -f ~/.kube/config
-      - echo "K3s uninstalled and kubeconfig removed."
+      - sudo /usr/local/bin/k3s-uninstall.sh || true
+      - sudo rm -f {{.KUBECONFIG}}
