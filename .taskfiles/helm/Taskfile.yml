@@ -1,0 +1,16 @@
+---
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+tasks:
+  install:
+    desc: "Install helm"
+    run: once
+    status:
+      - command -v helm >/dev/null 2>&1
+    cmds:
+      - defer: rm -f get_helm.sh
+      - >-
+        curl -fsSLo get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+        chmod 700 get_helm.sh
+        ./get_helm.sh
