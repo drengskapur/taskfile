@@ -10,8 +10,8 @@ includes:
   bun: .taskfiles/bun
   digitalocean: .taskfiles/digitalocean
   docker: .taskfiles/docker
-  helm: .taskfiles/helm
   hadolint: .taskfiles/hadolint
+  helm: .taskfiles/helm
   k3s: .taskfiles/k3s
   mix: .taskfiles/mix
   python3: .taskfiles/python3
