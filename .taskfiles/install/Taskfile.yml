@@ -1,0 +1,177 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+silent: false
+
+tasks:
+  bun:
+    desc: "Install Bun."
+    run: once
+    status:
+      - command -v bun >/dev/null 2>&1
+    cmds:
+      - curl -fsSL https://bun.sh/install | bash
+
+  pip:
+    desc: "Install pip"
+    run: once
+    status:
+      - python3 -m pip --version >/dev/null 2>&1
+    cmds:
+      - python3 -m ensurepip
+
+  uv:
+    desc: "Install uv"
+    run: once
+    status:
+      - python3 -m pip show uv >/dev/null 2>&1
+    cmds:
+      - python3 -m pip install --user --quiet --no-progress uv
+
+  hadolint:
+    desc: "Install hadolint"
+    run: once
+    status:
+      - command -v hadolint >/dev/null 2>&1
+    cmds:
+      - sudo curl -fsSL https://github.com/hadolint/hadolint/releases/download/v2.12.0/hadolint-Linux-x86_64 -o /usr/local/bin/hadolint
+      - sudo chown root:root /usr/local/bin/hadolint
+      - sudo chmod +x /usr/local/bin/hadolint
+      - hadolint --version
+
+  k3s:
+    desc: "Install k3s"
+    run: once
+    status:
+      - command -v k3s >/dev/null 2>&1
+    cmds:
+      - curl -sfL https://get.k3s.io | sh -
+      - sudo k3s kubectl get nodes
+
+  rclone:
+    desc: "Install rclone"
+    run: once
+    status:
+      - command -v rclone >/dev/null 2>&1
+    cmds:
+      - curl https://rclone.org/install.sh | sudo bash
+      - rclone version
+
+  fuse:
+    desc: "Install FUSE"
+    run: once
+    status:
+      - command -v fusermount >/dev/null 2>&1
+    cmds:
+      - sudo apt update
+      - sudo apt install -y fuse
+
+  terraform:
+    desc: "Install terraform"
+    run: once
+    status:
+      - command -v terraform
+    deps:
+      - task: jq
+    vars:
+      LATEST_VERSION:
+        sh: curl -s https://api.github.com/repos/hashicorp/terraform/releases/latest | jq -r '.tag_name | ltrimstr("v")'
+    cmds:
+      - defer: rm -f terraform_{{.LATEST_VERSION}}_linux_amd64.zip
+      - defer: rm -f LICENSE.txt
+      - |
+        curl -LO "https://releases.hashicorp.com/terraform/{{.LATEST_VERSION}}/terraform_{{.LATEST_VERSION}}_linux_amd64.zip"
+        unzip -qO terraform_{{.LATEST_VERSION}}_linux_amd64.zip
+        sudo mv terraform /usr/local/bin/terraform
+        sudo chown root:root /usr/local/bin/terraform
+        sudo chmod +x /usr/local/bin/terraform
+
+  aws:
+    desc: "Install aws-cli"
+    run: once
+    status:
+      - command -v aws
+    cmds:
+      - defer: rm -f awscliv2.zip
+      - defer: rm -rf aws
+      - |
+        sudo rm -rf /usr/local/aws-cli
+        curl -so "awscliv2.zip" "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"
+        unzip -qo awscliv2.zip
+        sudo ./aws/install -b /usr/local/bin -i /usr/local/aws-cli -u >/dev/null 2>&1
+        sudo chown root:root /usr/local/bin/aws
+        sudo chmod +x /usr/local/bin/aws
+
+  jq:
+    desc: "Install jq"
+    run: once
+    vars:
+      LATEST_VERSION:
+        sh: |
+          curl -s https://api.github.com/repos/jqlang/jq/releases/latest | grep '"tag_name":' | sed -E 's/.*"tag_name": "jq-([^"]+)".*/\1/'
+      DOWNLOAD_URL: "https://github.com/jqlang/jq/releases/download/jq-{{.LATEST_VERSION}}/jq-linux64"
+    cmds:
+      - defer: rm -f jq-linux64
+      - >-
+        curl -sLO "{{.DOWNLOAD_URL}}"
+        sudo mv jq-linux64 /usr/local/bin/jq
+        sudo chown root:root /usr/local/bin/jq
+        sudo chmod +x /usr/local/bin/jq
+    status:
+      - command -v jq
+
+  erlang:
+    desc: "Install Erlang"
+    silent: false
+    vars:
+      HOME:
+        sh: echo $HOME
+      LATEST_OTP_VERSION:
+        sh: >
+          curl -s https://api.github.com/repos/erlang/otp/releases |
+          jq -r '.[0] | .tag_name' | awk -F'-' '{print $2}'
+      LATEST_OTP_MAJOR_VERSION:
+        sh: echo "{{.LATEST_OTP_VERSION}}" | awk -F'.' '{print $1}'
+      OTP_PATH: "export PATH={{.HOME}}/.elixir-install/installs/otp/{{.LATEST_OTP_VERSION}}/bin:$PATH"
+    cmds:
+      - defer: rm -f install.sh
+      - curl -fsSLO https://raw.githubusercontent.com/elixir-lang/elixir-lang.github.com/main/install.sh
+      - chmod +x install.sh
+      - ./install.sh otp@latest
+      - |
+        if ! grep -q "{{.OTP_PATH}}" "{{.HOME}}/.bashrc"; then
+          echo '{{.OTP_PATH}}' >> "{{.HOME}}/.bashrc"
+          export PATH={{.HOME}}/.elixir-install/installs/otp/{{.LATEST_OTP_VERSION}}/bin:$PATH
+        fi
+    status:
+      - command -v "{{.HOME}}/.elixir-install/installs/otp/{{.LATEST_OTP_VERSION}}/bin/erl"
+
+  elixir:
+    desc: "Install Elixir"
+    silent: false
+    deps:
+      - task: erlang
+    vars:
+      HOME:
+        sh: echo $HOME
+      LATEST_ELIXIR_VERSION:
+        sh: >
+          curl -s https://api.github.com/repos/elixir-lang/elixir/releases |
+          jq -r '.[].tag_name | select(test("^v[0-9]+\\.[0-9]+\\.[0-9]+$")) |
+          sub("^v"; "")' |
+          head -n 1
+      LATEST_OTP_MAJOR_VERSION:
+        sh: echo "{{erlang.LATEST_OTP_VERSION}}" | awk -F'.' '{print $1}'
+      ELIXIR_PATH: "export PATH={{.HOME}}/.elixir-install/installs/elixir/{{.LATEST_ELIXIR_VERSION}}-otp-{{.LATEST_OTP_MAJOR_VERSION}}/bin:$PATH"
+    cmds:
+      - defer: rm -f install.sh
+      - curl -fsSLO https://raw.githubusercontent.com/elixir-lang/elixir-lang.github.com/main/install.sh
+      - chmod +x install.sh
+      - ./install.sh elixir@latest
+      - |
+        if ! grep -q "{{.ELIXIR_PATH}}" "{{.HOME}}/.bashrc"; then
+          echo '{{.ELIXIR_PATH}}' >> "{{.HOME}}/.bashrc"
+          export PATH={{.HOME}}/.elixir-install/installs/elixir/{{.LATEST_ELIXIR_VERSION}}-otp-{{.LATEST_OTP_MAJOR_VERSION}}/bin:$PATH
+        fi
+    status:
+      - command -v "{{.HOME}}/.elixir-install/installs/elixir/{{.LATEST_ELIXIR_VERSION}}-otp-{{.LATEST_OTP_MAJOR_VERSION}}/bin/elixir"
