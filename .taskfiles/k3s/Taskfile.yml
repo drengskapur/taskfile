@@ -4,36 +4,17 @@ version: "3"
 vars:
   HOME:
     sh: echo $HOME
-  KUBECONFIG: "{{.HOME}}/.kube/config"
-  K3S_YAML: /etc/rancher/k3s/k3s.yaml
 
 tasks:
   default:
-    desc: "Install K3s with all prerequisites"
-    cmds:
-      - task: setup
-
-  setup:
-    desc: "Install K3s with system preconfiguration"
+    desc: "Preconfigure and install K3s"
+    run: once
     cmds:
       - task: preconfigure
       - task: install
 
   preconfigure:
     desc: "Configure system prerequisites"
-    run: once
-    cmds:
-      - task: update-system
-      - task: configure-system
-
-  update-system:
-    desc: "Update and upgrade system packages"
-    cmds:
-      - sudo apt-get update -y
-      - sudo apt-get upgrade -y
-
-  configure-system:
-    desc: "Configure system settings for K3s"
     run: once
     cmds:
       - task: install-deps
@@ -60,39 +41,35 @@ tasks:
     desc: "Configure UFW for K3s"
     run: once
     cmds:
-      - |
-        sudo ufw allow 6443/tcp  # Kubernetes API
-        sudo ufw allow from 10.42.0.0/16  # Pod network
-        sudo ufw allow from 10.43.0.0/16  # Service network
-        sudo ufw allow 8472/udp  # Flannel VXLAN
-        sudo ufw allow 51820/udp # Flannel WireGuard (IPv4)
-        sudo ufw allow 51821/udp # Flannel WireGuard (IPv6)
-        sudo ufw --force enable
+      - sudo ufw allow 6443/tcp # Kubernetes API
+      - sudo ufw allow from 10.42.0.0/16 # Pod network
+      - sudo ufw allow from 10.43.0.0/16 # Service network
+      - sudo ufw allow 8472/udp # Flannel VXLAN
+      - sudo ufw allow 51820/udp # Flannel WireGuard (IPv4)
+      - sudo ufw allow 51821/udp # Flannel WireGuard (IPv6)
+      - sudo ufw --force enable
 
   install:
     desc: "Install K3s"
     run: once
     status:
-      - which k3s
-    deps:
-      - configure-system
+      - command -v k3s >/dev/null 2>&1
     cmds:
       - curl -sfL https://get.k3s.io | sudo sh -
       - sudo systemctl enable --now k3s
-      - sudo chmod 644 {{.K3S_YAML}}
-      - task: setup-kubectl
+      - sudo chmod 644 /etc/rancher/k3s/k3s.yaml
 
   setup-kubectl:
     desc: "Configure kubectl"
     run: once
     cmds:
-      - mkdir -p $(dirname {{.KUBECONFIG}})
-      - sudo cp {{.K3S_YAML}} {{.KUBECONFIG}}
-      - sudo chown $(id -u):$(id -g) {{.KUBECONFIG}}
-      - sudo chmod 600 {{.KUBECONFIG}}
+      - mkdir -p {{.HOME}}/.kube
+      - sudo cp /etc/rancher/k3s/k3s.yaml {{.HOME}}/.kube/config
+      - sudo chown $(id -u):$(id -g) {{.HOME}}/.kube/config
+      - sudo chmod 600 {{.HOME}}/.kube/config
 
   uninstall:
     desc: "Remove K3s and cleanup"
     cmds:
       - sudo /usr/local/bin/k3s-uninstall.sh || true
-      - sudo rm -f {{.KUBECONFIG}}
+      - sudo rm -f {{.HOME}}/.kube/config
