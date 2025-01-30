@@ -5,6 +5,7 @@ version: "3"
 tasks:
   install:
     desc: "Install Docker"
+    run: once
     status:
       - command -v docker
     vars:

@@ -1,0 +1,13 @@
+---
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+tasks:
+  install:
+    desc: "Install Lightweight Kubernetes (k3s)"
+    run: once
+    status:
+      - command -v k3s >/dev/null 2>&1
+    cmds:
+      - curl -sfL https://get.k3s.io | sh -
+      - sudo chmod 644 /etc/rancher/k3s/k3s.yaml
