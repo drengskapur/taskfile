@@ -1,8 +1,6 @@
 # yaml-language-server: $schema=https://taskfile.dev/schema.json
 version: "3"
 
-silent: false
-
 tasks:
   bun:
     desc: "Install Bun."
@@ -122,7 +120,7 @@ tasks:
 
   erlang:
     desc: "Install Erlang"
-    silent: false
+    run: once
     vars:
       HOME:
         sh: echo $HOME
@@ -148,7 +146,7 @@ tasks:
 
   elixir:
     desc: "Install Elixir"
-    silent: false
+    run: once
     deps:
       - task: erlang
     vars:
@@ -178,7 +176,7 @@ tasks:
 
   docker:
     desc: "Install Docker"
-    silent: false
+    run: once
     status:
       - command -v docker
     vars:
