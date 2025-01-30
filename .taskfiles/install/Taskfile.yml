@@ -175,3 +175,17 @@ tasks:
         fi
     status:
       - command -v "{{.HOME}}/.elixir-install/installs/elixir/{{.LATEST_ELIXIR_VERSION}}-otp-{{.LATEST_OTP_MAJOR_VERSION}}/bin/elixir"
+
+  docker:
+    desc: "Install Docker"
+    silent: false
+    status:
+      - command -v docker
+    vars:
+      USER:
+        sh: whoami
+    cmds:
+      - curl -fsSL https://get.docker.com | sh
+      - sudo usermod -aG docker "{{.USER}}"
+      - sudo systemctl enable docker
+      - sudo systemctl start docker

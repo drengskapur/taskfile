@@ -16,6 +16,7 @@ shopt: [globstar]
 
 includes:
   install: .taskfiles/install
+  docker: .taskfiles/docker
 
 tasks:
   default:
