@@ -1,0 +1,16 @@
+---
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+tasks:
+  install:
+    desc: "Install All Dependencies"
+    deps:
+      - task: install:metrics-agent
+
+  install:metrics-agent:
+    desc: "Install Metrics Agent"
+    cmds:
+      - defer: rm install.sh
+      - curl -sSLO https://repos.insights.digitalocean.com/install.sh
+      - sudo bash install.sh

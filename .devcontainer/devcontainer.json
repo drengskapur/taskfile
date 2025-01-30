@@ -1,7 +1,7 @@
 {
     "name": "Taskfile",
     "image": "mcr.microsoft.com/devcontainers/universal:2-linux",
-	"postCreateCommand": "curl -sL https://taskfile.dev/install.sh | sh -s -- -d -b /usr/local/bin",
+    "postCreateCommand": "curl -sL https://taskfile.dev/install.sh | sh -s -- -d -b /usr/local/bin",
     "customizations": {
         "vscode": {
             "extensions": [
