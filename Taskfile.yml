@@ -12,6 +12,7 @@ includes:
   docker: .taskfiles/docker
   hadolint: .taskfiles/hadolint
   helm: .taskfiles/helm
+  jq: .taskfiles/jq
   k3s: .taskfiles/k3s
   mix: .taskfiles/mix
   python3: .taskfiles/python3

@@ -1,0 +1,23 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+---
+version: "3"
+
+tasks:
+  install:
+    desc: "Install jq"
+    internal: true
+    run: once
+    vars:
+      LATEST_VERSION:
+        sh: |
+          curl -s https://api.github.com/repos/jqlang/jq/releases/latest | grep '"tag_name":' | sed -E 's/.*"tag_name": "jq-([^"]+)".*/\1/'
+      DOWNLOAD_URL: "https://github.com/jqlang/jq/releases/download/jq-{{.LATEST_VERSION}}/jq-linux64"
+    cmds:
+      - defer: rm -f jq-linux64
+      - >-
+        curl -sLO "{{.DOWNLOAD_URL}}"
+        sudo mv jq-linux64 /usr/local/bin/jq
+        sudo chown root:root /usr/local/bin/jq
+        sudo chmod +x /usr/local/bin/jq
+    status:
+      - command -v jq
