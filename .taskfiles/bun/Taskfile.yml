@@ -9,6 +9,8 @@ tasks:
     run: once
     status:
       - command -v bun >/dev/null 2>&1
+    deps:
+      - task: install-deps
     vars:
       HOME:
         sh: echo $HOME
@@ -18,3 +20,8 @@ tasks:
         sudo mv {{.HOME}}/.bun/bin/bun /usr/local/bin/
         sudo chown root:root /usr/local/bin/bun
         sudo chmod 755 /usr/local/bin/bun
+
+  install-deps:
+    desc: "Install bun dependencies"
+    cmds:
+      - sudo apt install unzip
