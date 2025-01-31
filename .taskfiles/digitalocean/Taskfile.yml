@@ -3,8 +3,8 @@
 version: "3"
 
 tasks:
-  install:
-    desc: "Install All Dependencies"
+  default:
+    desc: "Default DigitalOcean setup"
     deps:
       - task: install:metrics-agent
       - task: install:doctl
