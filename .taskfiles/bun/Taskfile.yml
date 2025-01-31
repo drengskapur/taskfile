@@ -4,7 +4,6 @@ version: "3"
 
 tasks:
   install:
-    silent: true
     run: once
     status:
       - command -v bun >/dev/null 2>&1

@@ -23,9 +23,8 @@ includes:
 tasks:
   default:
     cmd: task --list
-    silent: true
 
   noop:
     internal: true
-    silent: true
+
     cmd: noop() { :; }

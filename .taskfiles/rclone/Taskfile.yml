@@ -12,7 +12,7 @@ tasks:
       - curl https://rclone.org/install.sh | sudo bash
       - rclone version
 
-  selfupdate:
+  update:
     desc: "Self-update rclone to the latest version"
     run: once
     status:
