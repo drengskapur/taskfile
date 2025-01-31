@@ -12,10 +12,9 @@ tasks:
       DOWNLOAD_URL: "https://github.com/jqlang/jq/releases/download/jq-{{.LATEST_VERSION}}/jq-linux64"
     cmds:
       - defer: rm -f jq-linux64
-      - |
-        curl -sLO "{{.DOWNLOAD_URL}}"
-        sudo mv jq-linux64 /usr/local/bin/jq
-        sudo chown root:root /usr/local/bin/jq
-        sudo chmod +x /usr/local/bin/jq
+      - curl -sLO "{{.DOWNLOAD_URL}}"
+      - sudo mv jq-linux64 /usr/local/bin/jq
+      - sudo chown root:root /usr/local/bin/jq
+      - sudo chmod +x /usr/local/bin/jq
     status:
       - command -v jq

@@ -14,12 +14,11 @@ tasks:
     cmds:
       - defer: rm -f terraform_{{.LATEST_VERSION}}_linux_amd64.zip
       - defer: rm -f LICENSE.txt
-      - |
-        curl -LO "https://releases.hashicorp.com/terraform/{{.LATEST_VERSION}}/terraform_{{.LATEST_VERSION}}_linux_amd64.zip"
-        unzip -qO terraform_{{.LATEST_VERSION}}_linux_amd64.zip
-        sudo mv terraform /usr/local/bin/terraform
-        sudo chown root:root /usr/local/bin/terraform
-        sudo chmod +x /usr/local/bin/terraform
+      - curl -LO "https://releases.hashicorp.com/terraform/{{.LATEST_VERSION}}/terraform_{{.LATEST_VERSION}}_linux_amd64.zip"
+      - unzip -qO terraform_{{.LATEST_VERSION}}_linux_amd64.zip
+      - sudo mv terraform /usr/local/bin/terraform
+      - sudo chown root:root /usr/local/bin/terraform
+      - sudo chmod +x /usr/local/bin/terraform
     status:
       - command -v terraform
 
@@ -60,10 +59,9 @@ tasks:
       DOWNLOAD_URL: "https://github.com/jqlang/jq/releases/download/jq-{{.LATEST_VERSION}}/jq-linux64"
     cmds:
       - defer: rm -f jq-linux64
-      - >-
-        curl -sLO "{{.DOWNLOAD_URL}}"
-        sudo mv jq-linux64 /usr/local/bin/jq
-        sudo chown root:root /usr/local/bin/jq
-        sudo chmod +x /usr/local/bin/jq
+      - curl -sLO "{{.DOWNLOAD_URL}}"
+      - sudo mv jq-linux64 /usr/local/bin/jq
+      - sudo chown root:root /usr/local/bin/jq
+      - sudo chmod +x /usr/local/bin/jq
     status:
       - command -v jq
