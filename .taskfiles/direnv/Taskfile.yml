@@ -4,6 +4,7 @@ version: "3"
 
 tasks:
   install:
+    desc: "Install direnv"
     run: once
     status:
       - command -v direnv >/dev/null 2>&1

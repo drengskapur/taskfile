@@ -93,7 +93,6 @@ tasks:
 
   dev:
     desc: "Run development server"
-    silent: false
     cmds:
       - mix deps.get
       - mix clean
@@ -102,7 +101,6 @@ tasks:
 
   test:
     desc: "Run tests"
-    silent: false
     aliases:
       - test
     cmds:
@@ -110,24 +108,20 @@ tasks:
 
   deps:
     desc: "Install dependencies"
-    silent: false
     cmds:
       - mix deps.get
 
   compile:
     desc: "Compile project"
-    silent: false
     cmds:
       - mix compile
 
   format:
     desc: "Format code"
-    silent: false
     cmds:
       - mix format
 
   clean:
     desc: "Clean project"
-    silent: false
     cmds:
       - mix clean
