@@ -4,7 +4,6 @@ version: "3"
 
 tasks:
   install:
-    desc: "Install bun"
     silent: true
     run: once
     status:
@@ -15,13 +14,11 @@ tasks:
       HOME:
         sh: echo $HOME
     cmds:
-      - |
-        curl -fsSL https://bun.sh/install | bash
-        sudo mv {{.HOME}}/.bun/bin/bun /usr/local/bin/
-        sudo chown root:root /usr/local/bin/bun
-        sudo chmod 755 /usr/local/bin/bun
+      - curl -fsSL https://bun.sh/install | bash
+      - sudo mv {{.HOME}}/.bun/bin/bun /usr/local/bin/
+      - sudo chown root:root /usr/local/bin/bun
+      - sudo chmod 755 /usr/local/bin/bun
 
   install-deps:
-    desc: "Install bun dependencies"
     cmds:
-      - sudo apt install unzip
+      - sudo apt install -y unzip
