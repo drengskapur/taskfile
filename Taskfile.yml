@@ -9,6 +9,7 @@ includes:
   aws: .taskfiles/aws
   bun: .taskfiles/bun
   digitalocean: .taskfiles/digitalocean
+  direnv: .taskfiles/direnv
   docker: .taskfiles/docker
   hadolint: .taskfiles/hadolint
   helm: .taskfiles/helm
