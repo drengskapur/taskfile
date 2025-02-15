@@ -1,0 +1,28 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+---
+version: "3"
+
+includes:
+  fnm: ../fnm/Taskfile.yml
+
+vars:
+  NODE_VERSION: lts-latest
+
+tasks:
+  install:
+    desc: Install Node.js using fnm
+    cmds:
+      - task: fnm:install
+
+  run:
+    desc: Run a Node.js command
+    deps: [install]
+    cmds:
+      - task: fnm:run
+        vars:
+          CLI_ARGS: "{{.CLI_ARGS}}"
+
+  uninstall:
+    desc: Uninstall Node.js and fnm
+    cmds:
+      - task: fnm:uninstall

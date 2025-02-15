@@ -1,0 +1,276 @@
+version: '3'
+
+output: group
+set: [pipefail]
+interval: 2s
+dotenv: ['.env']
+
+vars:
+  INSTALL_DIR:
+    sh: echo "${XDG_DATA_HOME:-$HOME/.local/share}/fnm"
+  TEMP_DIR: /tmp/fnm-install
+  FNM_INSTALL_URL: https://fnm.vercel.app/install
+  SHELL_TYPE:
+    sh: basename "$SHELL"
+  SHELL_CONFIG:
+    sh: |
+      case "$SHELL" in
+        */fish) echo "$HOME/.config/fish/conf.d/fnm.fish" ;;
+        */zsh)  echo "$HOME/.zshrc" ;;
+        *)      echo "$HOME/.bashrc" ;;
+      esac
+
+tasks:
+  default:
+    desc: Install fnm node version manager
+    cmds:
+      - task: install
+
+  install:
+    desc: Install fnm based on current platform
+    prompt: This will modify your shell configuration. Continue?
+    summary: |
+      Installs fnm (Fast Node Manager) for your platform.
+      
+      This will:
+      1. Create installation directory
+      2. Download and install fnm
+      3. Configure your shell environment
+      4. Set up shell completions
+    preconditions:
+      - sh: '[ ! -x "$(command -v fnm)" ]'
+        msg: fnm is already installed. Run uninstall first if you want to reinstall.
+      - sh: '[ -w "$(dirname {{.INSTALL_DIR}})" ]'
+        msg: Installation directory is not writable. Please check permissions.
+    cmds:
+      - mkdir -p {{.TEMP_DIR}}
+      - defer: rm -rf {{.TEMP_DIR}}
+      - task: setup-dir
+      - task: validate-platform
+      - task: "install-{{OS}}"
+      - task: verify-installation
+
+  setup-dir:
+    internal: true
+    cmds:
+      - mkdir -p {{.INSTALL_DIR}}
+      - |
+        COMP_DIR=$(case "$SHELL" in
+          */fish) echo "$HOME/.config/fish/completions" ;;
+          */zsh)  echo "$HOME/.local/share/zsh/site-functions" ;;
+          *)      echo "$HOME/.local/share/bash-completion/completions" ;;
+        esac)
+        mkdir -p "$COMP_DIR"
+        echo "$COMP_DIR" > {{.TEMP_DIR}}/comp_dir
+
+  validate-platform:
+    internal: true
+    cmds:
+      - |
+        case "{{OS}}" in
+          linux|darwin|windows) ;;
+          *) echo "Unsupported platform: {{OS}}" && exit 1 ;;
+        esac
+
+  install-linux:
+    internal: true
+    platforms: [linux]
+    requires:
+      vars: [INSTALL_DIR]
+    cmds:
+      - |
+        echo "Backing up shell configuration..."
+        if [ -f "{{.SHELL_CONFIG}}" ]; then
+          cp "{{.SHELL_CONFIG}}" "{{.TEMP_DIR}}/shell_config.bak"
+        fi
+      - curl -fsSL {{.FNM_INSTALL_URL}} > {{.TEMP_DIR}}/install.sh
+      - defer: rm -f {{.TEMP_DIR}}/install.sh
+      - bash {{.TEMP_DIR}}/install.sh --install-dir {{.INSTALL_DIR}}
+      - |
+        if [ -n "$FISH_VERSION" ]; then
+          CONFIG_FILE="{{.SHELL_CONFIG}}"
+          mkdir -p "$(dirname $CONFIG_FILE)"
+          cat > "$CONFIG_FILE.tmp" << 'EOF'
+          set -gx PATH {{.INSTALL_DIR}} $PATH
+          fnm env --use-on-cd | source
+          EOF
+          mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
+        else
+          CONFIG_FILE="{{.SHELL_CONFIG}}"
+          TEMP_RC="{{.TEMP_DIR}}/shell_config"
+          cat "$CONFIG_FILE" > "$TEMP_RC" 2>/dev/null || touch "$TEMP_RC"
+          echo '# fnm' >> "$TEMP_RC"
+          echo 'export PATH="{{.INSTALL_DIR}}:$PATH"' >> "$TEMP_RC"
+          echo 'eval "$(fnm env --use-on-cd)"' >> "$TEMP_RC"
+          mv "$TEMP_RC" "$CONFIG_FILE"
+        fi
+      - task: setup-completions
+
+  install-darwin:
+    internal: true
+    platforms: [darwin]
+    vars:
+      HAS_BREW:
+        sh: command -v brew >/dev/null 2>&1 && echo true || echo false
+    cmds:
+      - |
+        if [ "{{.HAS_BREW}}" = "true" ]; then
+          brew install fnm
+        else
+          task: install-linux
+        fi
+
+  install-windows:
+    internal: true
+    platforms: [windows]
+    cmds:
+      - |
+        $tempScript = "{{.TEMP_DIR}}/install.ps1"
+        $installDir = "{{.INSTALL_DIR}}"
+        
+        # Create temp script with installation logic
+        Set-Content $tempScript @'
+        if (Get-Command scoop -ErrorAction SilentlyContinue) {
+          scoop install fnm
+        } else {
+          New-Item -ItemType Directory -Force -Path "{{.INSTALL_DIR}}"
+          iwr -useb {{.FNM_INSTALL_URL}} | iex
+        }
+        
+        # Create temp profile with backup
+        $tempProfile = "{{.TEMP_DIR}}/profile.ps1"
+        if (Test-Path $PROFILE) {
+          Copy-Item $PROFILE "{{.TEMP_DIR}}/profile.bak"
+          Copy-Item $PROFILE $tempProfile
+        } else {
+          New-Item -ItemType File -Path $tempProfile
+        }
+        
+        Add-Content $tempProfile @"
+        # fnm
+        `$env:PATH = "$installDir;`$env:PATH"
+        fnm env --use-on-cd | Out-String | Invoke-Expression
+        "@
+        
+        Move-Item $tempProfile $PROFILE -Force
+        '@
+      - defer: Remove-Item "{{.TEMP_DIR}}/install.ps1" -ErrorAction SilentlyContinue
+      - powershell -File "{{.TEMP_DIR}}/install.ps1"
+
+  setup-completions:
+    internal: true
+    cmds:
+      - |
+        COMP_DIR=$(cat {{.TEMP_DIR}}/comp_dir)
+        SHELL_TYPE="{{.SHELL_TYPE}}"
+        COMP_FILE="fnm"
+        case "$SHELL_TYPE" in
+          zsh)  COMP_FILE="_fnm" ;;
+          fish) COMP_FILE="fnm.fish" ;;
+        esac
+        
+        echo "Setting up completions for $SHELL_TYPE..."
+        if command -v fnm >/dev/null 2>&1; then
+          fnm completions --shell "$SHELL_TYPE" > "{{.TEMP_DIR}}/$COMP_FILE"
+          mv "{{.TEMP_DIR}}/$COMP_FILE" "$COMP_DIR/$COMP_FILE"
+        else
+          echo "Warning: fnm not found in PATH, skipping completions setup"
+        fi
+
+  verify-installation:
+    internal: true
+    cmds:
+      - |
+        if ! command -v fnm >/dev/null 2>&1; then
+          echo "Error: fnm installation failed" && exit 1
+        fi
+        echo "fnm installed successfully"
+        fnm --version
+
+  uninstall:
+    desc: Uninstall fnm and clean up configuration
+    prompt: This will remove fnm and its configuration. Continue?
+    cmds:
+      - mkdir -p {{.TEMP_DIR}}
+      - defer: rm -rf {{.TEMP_DIR}}
+      - task: backup-config
+      - task: "uninstall-{{OS}}"
+
+  backup-config:
+    internal: true
+    cmds:
+      - |
+        if [ -f "{{.SHELL_CONFIG}}" ]; then
+          cp "{{.SHELL_CONFIG}}" "{{.TEMP_DIR}}/shell_config.bak"
+          echo "Shell config backed up to {{.TEMP_DIR}}/shell_config.bak"
+        fi
+
+  uninstall-linux:
+    internal: true
+    platforms: [linux]
+    cmds:
+      - rm -rf {{.INSTALL_DIR}}
+      - |
+        if [ -n "$FISH_VERSION" ]; then
+          rm -f "{{.SHELL_CONFIG}}"
+        else
+          sed -i '/# fnm/,+2d' "{{.SHELL_CONFIG}}"
+        fi
+      - task: cleanup-completions
+
+  uninstall-darwin:
+    internal: true
+    platforms: [darwin]
+    vars:
+      HAS_BREW:
+        sh: command -v brew >/dev/null 2>&1 && echo true || echo false
+    cmds:
+      - |
+        if [ "{{.HAS_BREW}}" = "true" ]; then
+          brew uninstall fnm
+        else
+          task: uninstall-linux
+        fi
+
+  uninstall-windows:
+    internal: true
+    platforms: [windows]
+    cmds:
+      - |
+        if (Get-Command scoop -ErrorAction SilentlyContinue) {
+          scoop uninstall fnm
+        } else {
+          Remove-Item -Path "{{.INSTALL_DIR}}" -Recurse -Force
+          # Restore profile backup if it exists
+          if (Test-Path "{{.TEMP_DIR}}/profile.bak") {
+            Move-Item "{{.TEMP_DIR}}/profile.bak" $PROFILE -Force
+          } else {
+            (Get-Content $PROFILE) | Where-Object { $_ -notmatch "# fnm" } | Set-Content $PROFILE
+          }
+        }
+
+  cleanup-completions:
+    internal: true
+    cmds:
+      - |
+        COMP_DIR=$(cat {{.TEMP_DIR}}/comp_dir)
+        SHELL_TYPE="{{.SHELL_TYPE}}"
+        COMP_FILE="fnm"
+        case "$SHELL_TYPE" in
+          zsh)  COMP_FILE="_fnm" ;;
+          fish) COMP_FILE="fnm.fish" ;;
+        esac
+        rm -f "$COMP_DIR/$COMP_FILE"
+
+  status:
+    desc: Check fnm installation status
+    cmds:
+      - |
+        if command -v fnm >/dev/null 2>&1; then
+          echo "fnm is installed"
+          echo "Version: $(fnm --version)"
+          echo "Install directory: {{.INSTALL_DIR}}"
+          echo "Shell config: {{.SHELL_CONFIG}}"
+        else
+          echo "fnm is not installed"
+        fi
