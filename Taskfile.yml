@@ -6,11 +6,13 @@ set: [pipefail]
 shopt: [globstar]
 
 includes:
+  act: .taskfiles/act
   aws: .taskfiles/aws
   bun: .taskfiles/bun
   digitalocean: .taskfiles/digitalocean
   direnv: .taskfiles/direnv
   docker: .taskfiles/docker
+  fnm: .taskfiles/fnm
   hadolint: .taskfiles/hadolint
   helm: .taskfiles/helm
   jq: .taskfiles/jq
@@ -29,5 +31,4 @@ tasks:
 
   noop:
     internal: true
-
     cmd: noop() { :; }
