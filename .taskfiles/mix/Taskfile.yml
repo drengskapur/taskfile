@@ -108,4 +108,5 @@ tasks:
         echo "Current dir: {{.TASKFILE_DIR}}"
         pwd
         ls -la
-        act push -W test-mix.yml --container-options "--privileged" --eventpath event.json
+        act push -W test-mix.yml --container-options "--privileged" --eventpath event.json &
+        echo "Testing in background..."
