@@ -34,12 +34,24 @@ add_to_path() {
 install_task() {
     echo "Installing Task..."
     local install_dir="${HOME}/.local/bin"
+    local temp_dir
+    temp_dir="$(mktemp -d)"
+    
     mkdir -p "$install_dir"
-
+    
+    # Change to temp directory for installation
+    pushd "$temp_dir" >/dev/null || exit 1
+    
     if ! curl -fsSL "$INSTALL_SCRIPT" | sh -s -- -d -b "$install_dir"; then
         echo "Task installation failed."
+        popd >/dev/null || true
+        rm -rf "$temp_dir"
         exit 1
     fi
+    
+    # Return to original directory and cleanup
+    popd >/dev/null || true
+    rm -rf "$temp_dir"
 
     if [[ ":$PATH:" != *":$install_dir:"* ]]; then
         add_to_path "$install_dir"
