@@ -7,6 +7,13 @@ A collection of reusable taskfiles for common development workflows.
 - Ubuntu (latest)
 - [catthehacker/ubuntu](https://github.com/catthehacker/docker_images) (latest)
 
+## Editor Configuration
+
+The repository includes minimal VS Code settings that enable:
+- Format on save
+- Format on paste
+- Explicit Biome quick fixes and import organization
+
 ## Installation Status
 
 | Tool | Ubuntu Latest | catthehacker/ubuntu | Description |
