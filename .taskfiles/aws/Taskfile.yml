@@ -53,18 +53,19 @@ tasks:
   install_linux:
     internal: true
     cmds:
-      - defer: rm -f awscliv2.zip
-      - defer: rm -rf aws
-      - curl -sL "{{.DOWNLOAD_URL}}" -o awscliv2.zip
+      - curl -fsSL "{{.DOWNLOAD_URL}}" -o awscliv2.zip
       - unzip -q awscliv2.zip
-      - sudo ./aws/install
+      - sudo ./aws/install --update
+      - rm -rf aws
+      - rm -f awscliv2.zip
+      - aws --version
 
   install_darwin:
     internal: true
     cmds:
-      - curl -sL "{{.DOWNLOAD_URL}}" -o AWSCLIV2.pkg
+      - curl -sLO "{{.DOWNLOAD_URL}}"
       - sudo installer -pkg AWSCLIV2.pkg -target /
-      - rm AWSCLIV2.pkg
+      - rm -f AWSCLIV2.pkg
 
   verify:
     desc: "Verify AWS CLI installation"
@@ -75,3 +76,25 @@ tasks:
         msg: "This task only supports amd64 and arm64 architectures"
     cmds:
       - aws --version
+
+  test:
+    desc: "Test AWS CLI installation"
+    deps:
+      - task: test:version
+      - task: test:help
+      - task: test:configure
+
+  test:version:
+    internal: true
+    cmds:
+      - test "$(aws --version 2>&1 | grep -c "aws-cli")" -eq 1
+
+  test:help:
+    internal: true
+    cmds:
+      - test "$(aws help 2>&1 | grep -c "SYNOPSIS")" -eq 1
+
+  test:configure:
+    internal: true
+    cmds:
+      - aws configure list
