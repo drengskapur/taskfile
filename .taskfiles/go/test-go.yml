@@ -16,7 +16,7 @@ jobs:
   test:
     name: Test Go installation
     runs-on: ubuntu-22.04
-    if: ${{ !github.event.act }} # Skip during local testing
+    if: github.repository == 'drengskapur/taskfile' && !contains(github.event.act, 'true') # Skip during local testing
     container:
       image: ubuntu:22.04
       options: --privileged --user root

@@ -15,7 +15,7 @@ jobs:
   test:
     name: Test AWS CLI installation
     runs-on: ubuntu-22.04
-    if: ${{ !github.event.act }} # Skip during local testing
+    if: github.repository == 'drengskapur/taskfile' && !contains(github.event.act, 'true') # Skip during local testing
     container:
       image: ubuntu:22.04
       options: --privileged --user root
@@ -57,7 +57,7 @@ jobs:
   test-local:
     name: Test AWS CLI installation (Local)
     runs-on: ubuntu-22.04
-    if: ${{ github.event.act }} # Only run during local testing
+    if: contains(github.event.act, 'true') # Only run during local testing
     container:
       image: ubuntu:22.04
       options: --privileged --user root
