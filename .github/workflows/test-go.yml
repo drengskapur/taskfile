@@ -1,0 +1,27 @@
+name: Test Go Installation
+
+on:
+  push:
+    paths:
+      - '.taskfiles/go/**'
+  pull_request:
+    paths:
+      - '.taskfiles/go/**'
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/drengskapur/taskfile-tester:develop
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure Git
+        run: git config --global --add safe.directory /home/user/taskfile
+
+      - name: Install Go
+        run: task go:install
+
+      - name: Verify Go Installation
+        run: /root/.local/go/bin/go version

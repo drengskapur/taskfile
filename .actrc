@@ -1,0 +1,6 @@
+--platform ubuntu-latest=ghcr.io/drengskapur/taskfile-tester:develop
+--container-architecture linux/amd64
+--env-file .env
+-s GITHUB_TOKEN
+--bind
+--use-gitignore
