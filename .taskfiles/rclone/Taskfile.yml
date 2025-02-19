@@ -11,6 +11,7 @@ tasks:
     desc: "Install rclone and FUSE"
     deps: 
       - fuse-install
+    run: once
     status:
       - command -v rclone >/dev/null 2>&1
     cmds:
@@ -27,8 +28,8 @@ tasks:
       - echo "rclone has been updated to the latest version"
 
   fuse-install:
-    internal: true
     desc: "Install FUSE support"
+    internal: true
     run: once
     status:
       - command -v fusermount >/dev/null 2>&1

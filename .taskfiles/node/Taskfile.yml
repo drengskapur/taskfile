@@ -11,6 +11,7 @@ tasks:
     desc: "Install Node.js"
     deps: 
       - setup-deps
+    run: once
     status:
       - command -v node >/dev/null 2>&1
     cmds:
@@ -18,8 +19,9 @@ tasks:
       - task: fnm-install-node
 
   setup-deps:
-    internal: true
     desc: "Install Ubuntu dependencies"
+    internal: true
+    run: once
     status:
       - command -v curl unzip >/dev/null 2>&1
     cmds:
@@ -27,8 +29,9 @@ tasks:
       - sudo apt install -y curl unzip
 
   fnm-install:
-    internal: true
     desc: "Install fnm"
+    internal: true
+    run: once
     status:
       - command -v fnm >/dev/null 2>&1
     cmds:
@@ -36,8 +39,9 @@ tasks:
       - echo 'eval "$(fnm env --use-on-cd)"' >> $HOME/.bashrc
 
   fnm-install-node:
-    internal: true
     desc: "Install latest LTS Node.js"
+    internal: true
+    run: once
     cmds:
       - source $HOME/.bashrc
       - fnm install --lts

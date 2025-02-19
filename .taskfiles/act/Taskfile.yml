@@ -1,0 +1,44 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+---
+version: "3"
+
+vars:
+  HOME:
+    sh: echo $HOME
+
+tasks:
+  default:
+    deps:
+      - task: install
+
+  install:
+    desc: "Install act"
+    vars:
+      LATEST_VERSION:
+        sh: curl -s https://api.github.com/repos/nektos/act/releases/latest | jq -r '.tag_name | ltrimstr("v")'
+      DOWNLOAD_URL: "https://github.com/nektos/act/releases/download/v{{.LATEST_VERSION}}/act_Linux_x86_64.tar.gz"
+    run: once
+    status:
+      - command -v act >/dev/null 2>&1
+    defer:
+      - rm -f act_Linux_x86_64.tar.gz
+    cmds:
+      - curl -sLO "{{.DOWNLOAD_URL}}"
+      - tar xf act_Linux_x86_64.tar.gz
+      - sudo mv act /usr/local/bin/
+      - sudo chown root:root /usr/local/bin/act
+      - sudo chmod 755 /usr/local/bin/act
+      - act --version
+
+  setup:config:
+    desc: "Configure act defaults"
+    run: once
+    status:
+      - test -f "{{.HOME}}/.actrc"
+    cmds:
+      - |
+        cat > "{{.HOME}}/.actrc" << 'EOF'
+        -P ubuntu-latest=ghcr.io/catthehacker/ubuntu:act-latest
+        -P ubuntu-22.04=ghcr.io/catthehacker/ubuntu:act-22.04
+        -P ubuntu-20.04=ghcr.io/catthehacker/ubuntu:act-20.04
+        EOF

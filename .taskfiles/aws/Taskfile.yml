@@ -4,11 +4,13 @@ version: "3"
 
 tasks:
   default:
-    deps:
-      - task: install
+    deps: 
+      - install
 
   install:
     desc: "Install AWS CLI"
+    vars:
+      DOWNLOAD_URL: "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"
     run: once
     status:
       - command -v aws >/dev/null 2>&1
@@ -16,7 +18,7 @@ tasks:
       - rm -f awscliv2.zip
       - rm -rf aws
     cmds:
-      - curl -sLO "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o awscliv2.zip
+      - curl -sLO "{{.DOWNLOAD_URL}}" -o awscliv2.zip
       - unzip -q awscliv2.zip
       - sudo ./aws/install
       - aws --version

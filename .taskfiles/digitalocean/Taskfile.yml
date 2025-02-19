@@ -17,17 +17,19 @@ tasks:
     desc: "Install doctl CLI"
     vars:
       LATEST_VERSION:
-        sh: curl -s https://api.github.com/repos/digitalocean/doctl/releases/latest | jq -r '.tag_name | sub("^v"; "")'
+        sh: curl -s https://api.github.com/repos/digitalocean/doctl/releases/latest | jq -r '.tag_name | ltrimstr("v")'
       DOWNLOAD_URL: "https://github.com/digitalocean/doctl/releases/download/v{{.LATEST_VERSION}}/doctl-{{.LATEST_VERSION}}-linux-amd64.tar.gz"
     run: once
     status:
       - command -v doctl >/dev/null 2>&1
     defer:
-      - rm -f doctl.tar.gz
+      - rm -f doctl-{{.LATEST_VERSION}}-linux-amd64.tar.gz
     cmds:
-      - curl -sLO "{{.DOWNLOAD_URL}}" -o doctl.tar.gz
-      - tar xf doctl.tar.gz
-      - sudo mv doctl /usr/local/bin
+      - curl -sLO "{{.DOWNLOAD_URL}}"
+      - tar xf doctl-{{.LATEST_VERSION}}-linux-amd64.tar.gz
+      - sudo mv doctl /usr/local/bin/
+      - sudo chown root:root /usr/local/bin/doctl
+      - sudo chmod 755 /usr/local/bin/doctl
       - doctl version
 
   install:metrics-agent:
