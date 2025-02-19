@@ -1,27 +1,13 @@
 {
-  "name": "@taskfile/tester",
-  "version": "1.0.0",
+  "name": "@drengskapur/taskfile-tester",
+  "version": "0.0.0",
   "private": true,
-  "type": "module",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    }
-  },
   "scripts": {
-    "build": "tsc",
-    "dev": "tsc -w",
-    "lint": "biome check .",
-    "test": "TESTCONTAINERS_RYUK_DISABLED=true TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock vitest run --logHeapUsage --reporter=verbose"
-  },
-  "dependencies": {
-    "testcontainers": "^10.7.1"
-  },
-  "devDependencies": {
-    "@types/node": "^20.11.19",
-    "@vitest/coverage-v8": "^1.3.1",
-    "typescript": "^5.3.3",
-    "vitest": "^1.3.1"
+    "build": "task -d ./src workflows:generate",
+    "build:image": "docker buildx bake -f ./src/docker-bake.hcl --push",
+    "generate": "task -d ./src workflows:generate",
+    "update:readme": "task -d ./src readme:update",
+    "test": "act -C ../.. -W ../../.github/workflows/test-go.yml",
+    "test:all": "for f in ../../.github/workflows/test-*.yml; do act -C ../.. -W $f; done"
   }
 }
