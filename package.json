@@ -1,0 +1,24 @@
+{
+  "name": "taskfile",
+  "version": "1.0.0",
+  "description": "A collection of taskfiles for common developer tools and applications.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepare": "husky"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/drengskapur/taskfile.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/drengskapur/taskfile/issues"
+  },
+  "homepage": "https://github.com/drengskapur/taskfile#readme",
+  "devDependencies": {
+    "husky": "^9.1.7"
+  }
+}
