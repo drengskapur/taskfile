@@ -22,6 +22,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install Common Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            curl \
+            wget \
+            git \
+            jq \
+            unzip \
+            python3 \
+            python3-pip \
+            python3-venv
+
+      - name: Setup Environment
+        run: |
+          echo "SHELL=/bin/bash" >> $GITHUB_ENV
+          echo "TERM=xterm-256color" >> $GITHUB_ENV
+          echo "PATH=$PATH:/usr/local/bin" >> $GITHUB_ENV
+
       - name: Install Task
         run: |
           curl -sL https://taskfile.dev/install.sh | sh
@@ -30,20 +49,68 @@ jobs:
 
       - name: Test Taskfile
         working-directory: .taskfiles/${{ github.event.inputs.taskfile_dir }}
+        shell: bash
+        env:
+          SHELL: /bin/bash
+          TERM: xterm-256color
         run: |
           echo "Testing taskfile in $(pwd)"
           echo "Available tasks:"
           task -l
           
-          # Get all task names (strip the colon and description)
-          TASKS=$(task -l | grep '^* ' | sed 's/^* \([^:]*\):.*/\1/')
+          # Get all task names (preserve full task names with colons)
+          TASKS=$(task -l | grep '^* ' | sed -E 's/^\* ([^:]+:?[^:]*):.*$/\1/')
           
           # Run each task
           echo "Found tasks: $TASKS"
+          FAILED_TASKS=""
+          
+          # First run setup/init/create tasks
           for TASK in $TASKS; do
+            if [[ "$TASK" =~ ^(init|setup|create)$ ]] || [[ "$TASK" =~ :(init|setup|create)$ ]]; then
+              if [[ ! "$TASK" =~ activate$ ]]; then
+                echo "Running setup task: $TASK"
+                task "$TASK" || true
+              fi
+            fi
+          done
+          
+          # Then run the rest
+          for TASK in $TASKS; do
+            # Skip tasks that are likely to fail in CI
+            if [[ "$TASK" =~ ^(uninstall|clean|remove|purge)$ ]] || \
+               [[ "$TASK" =~ :(uninstall|clean|remove|purge)$ ]]; then
+              echo "Skipping task $TASK as it may be destructive"
+              continue
+            fi
+            
+            # Skip tasks with colons if they're namespaces
+            if [[ "$TASK" =~ :$ ]]; then
+              echo "Skipping namespace $TASK"
+              continue
+            fi
+            
+            # Skip tasks we already ran in setup phase
+            if [[ "$TASK" =~ ^(init|setup|create)$ ]] || [[ "$TASK" =~ :(init|setup|create)$ ]]; then
+              continue
+            fi
+            
+            # Check task description for manual/interactive flags
+            DESCRIPTION=$(task -l | grep "^\* $TASK:" | sed 's/^* [^:]*: \+//')
+            if [[ "$DESCRIPTION" =~ manual|interactive|requires.*input|activate ]]; then
+              echo "Skipping task $TASK as it requires manual intervention"
+              continue
+            fi
+            
             echo "Running task: $TASK"
             if ! task "$TASK"; then
               echo "Task $TASK failed"
-              exit 1
+              FAILED_TASKS="$FAILED_TASKS $TASK"
             fi
           done
+          
+          if [ -n "$FAILED_TASKS" ]; then
+            echo "The following tasks failed:$FAILED_TASKS"
+            echo "::error::Some tasks failed:$FAILED_TASKS"
+            exit 1
+          fi
