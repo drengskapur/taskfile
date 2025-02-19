@@ -5,12 +5,12 @@ version: "3"
 tasks:
   default:
     deps: 
-      - install
+      - task: install
 
   install:
     desc: "Install Node.js"
     deps: 
-      - setup-deps
+      - task: setup-deps
     run: once
     status:
       - command -v node >/dev/null 2>&1

@@ -4,8 +4,9 @@ version: "3"
 
 tasks:
   default:
+    desc: "Install AWS CLI"
     deps: 
-      - install
+      - task: install
 
   install:
     desc: "Install AWS CLI"

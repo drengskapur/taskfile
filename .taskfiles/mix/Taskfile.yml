@@ -4,14 +4,15 @@ version: "3"
 
 tasks:
   default:
+    desc: "Install Erlang and Elixir"
     deps: 
-      - install
+      - task: install
 
   install:
     desc: "Install Erlang and Elixir"
     deps: 
-      - erlang-install
-      - elixir-install
+      - task: erlang-install
+      - task: elixir-install
     status:
       - command -v mix >/dev/null 2>&1
     cmds:
@@ -50,7 +51,7 @@ tasks:
     desc: "Install Elixir"
     internal: true
     deps:
-      - erlang-install
+      - task: erlang-install
     vars:
       HOME:
         sh: echo $HOME
@@ -81,8 +82,8 @@ tasks:
   update:
     desc: "Update Erlang and Elixir"
     deps: 
-      - erlang-update
-      - elixir-update
+      - task: erlang-update
+      - task: elixir-update
     cmds:
       - mix local.hex --force
       - mix local.rebar --force
@@ -119,7 +120,7 @@ tasks:
     desc: "Update Elixir"
     internal: true
     deps:
-      - erlang-update
+      - task: erlang-update
     vars:
       HOME:
         sh: echo $HOME
