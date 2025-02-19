@@ -31,4 +31,4 @@ tasks:
       - |
         {{.COMMAND_PREFIX}} chown root:root /usr/local/bin/hadolint
       # Verify installation
-      - hadolint --version
+      - /usr/local/bin/hadolint --version
