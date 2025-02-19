@@ -19,6 +19,8 @@
   },
   "homepage": "https://github.com/drengskapur/taskfile#readme",
   "devDependencies": {
+    "@commitlint/cli": "11.0.0",
+    "@commitlint/config-conventional": "11.0.0",
     "husky": "^9.1.7"
   }
 }
