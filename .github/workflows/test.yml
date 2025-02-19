@@ -7,7 +7,8 @@ on:
     branches: [ main ]
 
 jobs:
-  test:
+  # Test the main Taskfile first
+  test-main:
     runs-on: ubuntu-latest
     env:
       SHELL: /bin/bash
@@ -23,38 +24,74 @@ jobs:
       - name: Check Task version
         run: task --version
 
-      - name: Validate Taskfile syntax
-        run: |
-          set -e
-          # First check the main Taskfile
-          task --dry || exit 1
-          
-          # Then check each taskfile individually
-          for taskfile in .taskfiles/*/Taskfile.yml; do
-            echo "Checking $taskfile..."
-            task --taskfile "$taskfile" --dry || {
-              echo "Error checking $taskfile"
-              exit 1
-            }
-          done
+      - name: Validate main Taskfile syntax
+        run: task --dry
 
       - name: List available tasks
         run: task --list
 
-      - name: Test each task with --dry
+  # Test individual taskfiles in parallel
+  test-taskfiles:
+    needs: test-main
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        taskfile:
+          - act
+          - aws
+          - bun
+          - digitalocean
+          - direnv
+          - docker
+          - fnm
+          - hadolint
+          - helm
+          - jq
+          - k3s
+          - mix
+          - node
+          - pnpm
+          - python3
+          - rclone
+          - terraform
+          - uv
+    env:
+      SHELL: /bin/bash
+      SHELL_RC: ${{ github.workspace }}/.bashrc
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Task
+        run: |
+          chmod +x ./install.sh
+          ./install.sh
+
+      - name: Create shell config
+        run: touch "$SHELL_RC"
+
+      - name: Test ${{ matrix.taskfile }} taskfile
         run: |
           set -e
-          # Create dummy .bashrc for shell configuration tasks
-          touch "$SHELL_RC"
+          TASKFILE=".taskfiles/${{ matrix.taskfile }}/Taskfile.yml"
+          echo "Testing $TASKFILE..."
           
-          # Get all available tasks
-          TASKS=$(task --list | grep -v "Available tasks" | grep "^* " | cut -d' ' -f2 | cut -d':' -f1 | sort -u)
+          # Validate syntax
+          task --taskfile "$TASKFILE" --dry || {
+            echo "Error: Syntax validation failed for $TASKFILE"
+            exit 1
+          }
           
-          # Try each task with --dry
+          # List available tasks
+          echo "Available tasks in $TASKFILE:"
+          task --taskfile "$TASKFILE" --list
+          
+          # Test each task with --dry
+          TASKS=$(task --taskfile "$TASKFILE" --list | grep -v "Available tasks" | grep "^* " | cut -d' ' -f2 | cut -d':' -f1 | sort -u)
           for task in $TASKS; do
             echo "Testing task: $task"
-            if ! task "$task" --dry; then
-              echo "Error testing task: $task"
+            if ! task --taskfile "$TASKFILE" "$task" --dry; then
+              echo "Error: Task '$task' failed dry run in $TASKFILE"
               exit 1
             fi
           done
