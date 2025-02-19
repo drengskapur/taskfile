@@ -2,6 +2,37 @@
 ---
 version: "3"
 
+vars:
+  METADATA: |
+    {
+      "description": "jq - Command-line JSON processor",
+      "category": "Development",
+      "homepage": "https://jqlang.github.io/jq/",
+      "platforms": ["linux", "darwin"],
+      "architectures": ["amd64", "arm64"]
+    }
+  OS:
+    sh: uname -s | tr '[:upper:]' '[:lower:]'
+  ARCH:
+    sh: |
+      case "$(uname -m)" in
+        x86_64) echo "amd64" ;;
+        aarch64) echo "arm64" ;;
+        *) echo "unsupported" ;;
+      esac
+  LATEST_VERSION:
+    sh: curl -s https://api.github.com/repos/jqlang/jq/releases/latest | grep -o 'jq-[0-9.]*' | head -1 | cut -d'-' -f2
+  DOWNLOAD_URL:
+    sh: |
+      case "{{OS}}" in
+        linux)
+          echo "https://github.com/jqlang/jq/releases/download/jq-{{.LATEST_VERSION}}/jq-linux-{{ARCH}}"
+          ;;
+        darwin)
+          echo "https://github.com/jqlang/jq/releases/download/jq-{{.LATEST_VERSION}}/jq-osx-amd64"
+          ;;
+      esac
+
 tasks:
   default:
     deps:
@@ -9,16 +40,21 @@ tasks:
 
   install:
     desc: "Install jq"
-    vars:
-      LATEST_VERSION:
-        sh: curl -s https://api.github.com/repos/jqlang/jq/releases/latest | jq -r '.tag_name | ltrimstr("jq-")'
-      DOWNLOAD_URL: "https://github.com/jqlang/jq/releases/download/jq-{{.LATEST_VERSION}}/jq-linux-amd64"
+    preconditions:
+      - sh: test "{{OS}}" = "linux" -o "{{OS}}" = "darwin"
+        msg: "This task only supports Linux and macOS"
+      - sh: test "{{ARCH}}" = "amd64" -o "{{ARCH}}" = "arm64"
+        msg: "This task only supports amd64 and arm64 architectures"
     run: once
     status:
       - command -v jq >/dev/null 2>&1
     cmds:
-      - curl -sLO "{{.DOWNLOAD_URL}}"
-      - chmod +x jq-linux-amd64
-      - sudo mv jq-linux-amd64 /usr/local/bin/jq
+      - curl -sL "{{.DOWNLOAD_URL}}" -o jq
+      - chmod +x jq
+      - sudo mv jq /usr/local/bin/jq
       - jq --version
-      - rm -f jq-linux-amd64
+
+  verify:
+    desc: "Verify jq installation"
+    cmds:
+      - jq --version

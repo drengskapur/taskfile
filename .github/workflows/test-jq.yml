@@ -24,10 +24,10 @@ jobs:
         run: git config --global --add safe.directory /home/user/taskfile
 
       - name: Install jq
-        run: task jq:install
+        run: cd .taskfiles/jq && task install
 
       - name: Verify jq Installation
-        run: task jq:verify
+        run: cd .taskfiles/jq && task verify
 
   catthehacker:
     name: catthehacker/ubuntu
@@ -43,7 +43,7 @@ jobs:
         run: git config --global --add safe.directory /home/user/taskfile
 
       - name: Install jq
-        run: task jq:install
+        run: cd .taskfiles/jq && task install
 
       - name: Verify jq Installation
-        run: task jq:verify
+        run: cd .taskfiles/jq && task verify
