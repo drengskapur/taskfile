@@ -2,6 +2,15 @@
 ---
 version: "3"
 
+vars:
+  HOME:
+    sh: echo $HOME
+  GO_VERSION: "1.24.0"
+  GO_DOWNLOAD_URL: https://go.dev/dl/go{{.GO_VERSION}}.linux-amd64.tar.gz
+  INSTALL_DIR: "/usr/local"
+  GOPATH:
+    sh: echo $GOPATH || echo $HOME/go
+
 tasks:
   default:
     deps:
@@ -9,49 +18,47 @@ tasks:
 
   install:
     desc: "Install Go"
-    vars:
-      GO_VERSION:
-        sh: |
-          curl -sSL https://golang.org/dl/?mode=json | grep -o '"version": "go[0-9.]*"' | head -1 | cut -d'"' -f4 | cut -c3-
-      DOWNLOAD_URL: https://golang.org/dl/go{{.GO_VERSION}}.linux-amd64.tar.gz
-      INSTALL_DIR: "{{.HOME}}/.local/go"
-      SHELL_RC: "{{.HOME}}/.bashrc"
-      HOME:
-        sh: echo $HOME
     run: once
     status:
-      - test -x {{.INSTALL_DIR}}/bin/go
+      - test -x {{.INSTALL_DIR}}/go/bin/go
     cmds:
       - defer: rm -f go.tar.gz
-      - curl -fsSL "{{.DOWNLOAD_URL}}" -o go.tar.gz
-      - rm -rf {{.INSTALL_DIR}}
-      - mkdir -p {{.INSTALL_DIR}}
-      - tar -C {{.HOME}}/.local -xzf go.tar.gz
-      - |
-        if ! grep -q "export PATH={{.INSTALL_DIR}}/bin:\$PATH" {{.SHELL_RC}}; then
-          echo 'export PATH={{.INSTALL_DIR}}/bin:$PATH' >> {{.SHELL_RC}}
-        fi
-      - export PATH={{.INSTALL_DIR}}/bin:$PATH
-      - |
-        {{.INSTALL_DIR}}/bin/go version
+      - test -x {{.INSTALL_DIR}}/go/bin/go || (
+        curl -fsSL "{{.GO_DOWNLOAD_URL}}" -o go.tar.gz &&
+        rm -rf {{.INSTALL_DIR}}/go &&
+        tar -C {{.INSTALL_DIR}} -xzf go.tar.gz &&
+        mkdir -p {{.GOPATH}}/bin &&
+        mkdir -p {{.GOPATH}}/src &&
+        mkdir -p {{.GOPATH}}/pkg &&
+        rm -f go.tar.gz
+        )
+      - task: configure-path
 
-  setup:
-    desc: "Setup Go environment"
-    deps:
-      - task: install
+  configure-path:
+    desc: "Configure PATH for Go"
+    internal: true
     vars:
-      SHELL_RC: "{{.HOME}}/.bashrc"
-      HOME:
-        sh: echo $HOME
-    run: once
-    status:
-      - test -d {{.HOME}}/go
+      SHELL_RC: "{{.HOME}}/.profile"
     cmds:
-      - mkdir -p {{.HOME}}/go/{bin,pkg,src}
       - |
-        if ! grep -q "export GOPATH={{.HOME}}/go" {{.SHELL_RC}}; then
-          echo 'export GOPATH={{.HOME}}/go' >> {{.SHELL_RC}}
+        if ! grep -q "export PATH=\$PATH:{{.INSTALL_DIR}}/go/bin" {{.SHELL_RC}}; then
+          echo 'export PATH=$PATH:{{.INSTALL_DIR}}/go/bin' >> {{.SHELL_RC}}
+        fi
+      - |
+        if ! grep -q "export GOPATH={{.GOPATH}}" {{.SHELL_RC}}; then
+          echo 'export GOPATH={{.GOPATH}}' >> {{.SHELL_RC}}
           echo 'export PATH=$PATH:$GOPATH/bin' >> {{.SHELL_RC}}
         fi
-      - export GOPATH={{.HOME}}/go
-      - export PATH=$PATH:$GOPATH/bin
+      # Run version check in a new shell that sources the profile
+      - |
+        {{.INSTALL_DIR}}/go/bin/go version
+
+  test:
+    desc: "Test Go installation"
+    dir: "{{.TASKFILE_DIR}}"
+    cmds:
+      - |
+        echo "Current dir: {{.TASKFILE_DIR}}"
+        pwd
+        ls -la
+        act push -W test-go.yml --container-options "--privileged" --eventpath event.json
