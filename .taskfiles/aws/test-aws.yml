@@ -18,7 +18,7 @@ jobs:
     if: github.repository == 'drengskapur/taskfile' && !contains(github.event.act, 'true') # Skip during local testing
     container:
       image: ubuntu:22.04
-      options: --privileged --user root
+      options: --privileged --user root --rm
     env:
       HOME: /root
       PATH: /bin:/usr/bin:/usr/local/bin
@@ -31,7 +31,9 @@ jobs:
       - name: Install base system utilities
         run: |
           apt-get update
-          apt-get install -y bash curl sudo
+          apt-get install -y bash curl sudo ca-certificates
+          cat /etc/ssl/certs/ca-certificates.crt > /dev/null
+          update-ca-certificates
 
       - name: Install remaining dependencies
         run: |
@@ -60,7 +62,7 @@ jobs:
     if: contains(github.event.act, 'true') # Only run during local testing
     container:
       image: ubuntu:22.04
-      options: --privileged --user root
+      options: --privileged --user root --rm
     env:
       HOME: /root
       PATH: /bin:/usr/bin:/usr/local/bin
@@ -74,7 +76,9 @@ jobs:
         if: ${{ github.event.act }}
         run: |
           apt-get update
-          apt-get install -y bash curl sudo
+          apt-get install -y bash curl sudo ca-certificates
+          cat /etc/ssl/certs/ca-certificates.crt > /dev/null
+          update-ca-certificates
 
       - name: Install remaining dependencies
         if: ${{ github.event.act }}

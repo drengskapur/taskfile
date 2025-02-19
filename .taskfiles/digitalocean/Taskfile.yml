@@ -39,6 +39,33 @@ tasks:
       - sudo bash install.sh
       - rm -f install.sh
 
+  test:
+    desc: "Test DigitalOcean tools installation"
+    deps:
+      - task: test:doctl
+
+  test:doctl:
+    desc: "Test doctl installation"
+    deps:
+      - task: test:doctl:version
+      - task: test:doctl:help
+      - task: test:doctl:compute
+
+  test:doctl:version:
+    internal: true
+    cmds:
+      - test "$(doctl version 2>&1 | grep -c "doctl")" -eq 1
+
+  test:doctl:help:
+    internal: true
+    cmds:
+      - test "$(doctl --help 2>&1 | grep -c "Usage")" -eq 1
+
+  test:doctl:compute:
+    internal: true
+    cmds:
+      - test "$(doctl compute --help 2>&1 | grep -c "Usage")" -eq 1
+
   debug:cloudinit:
     desc: "Debug Cloud Init logs"
     cmds:

@@ -15,7 +15,12 @@ tasks:
     status:
       - command -v rclone >/dev/null 2>&1
     cmds:
-      - curl https://rclone.org/install.sh | sudo bash
+      - |
+        if [ "$(id -u)" = "0" ]; then
+          curl https://rclone.org/install.sh | bash
+        else
+          curl https://rclone.org/install.sh | sudo bash
+        fi
       - rclone version
 
   update:
@@ -34,5 +39,20 @@ tasks:
     status:
       - command -v fusermount >/dev/null 2>&1
     cmds:
-      - sudo apt update
-      - sudo apt install -y fuse
+      - |
+        if [ "$(id -u)" = "0" ]; then
+          apt update
+          apt install -y fuse
+        else
+          sudo apt update
+          sudo apt install -y fuse
+        fi
+
+  test:
+    desc: "Test rclone installation and basic functionality"
+    deps:
+      - install
+    cmds:
+      - rclone --version
+      - rclone listremotes
+      - rclone config show

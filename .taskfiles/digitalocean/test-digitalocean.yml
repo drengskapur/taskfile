@@ -18,7 +18,7 @@ jobs:
     if: github.repository == 'drengskapur/taskfile' && !contains(github.event.act, 'true') # Skip during local testing
     container:
       image: ubuntu:22.04
-      options: --privileged --user root
+      options: --privileged --user root --rm
     env:
       HOME: /root
       PATH: /bin:/usr/bin:/usr/local/bin
@@ -60,7 +60,7 @@ jobs:
     if: contains(github.event.act, 'true') # Only run during local testing
     container:
       image: ubuntu:22.04
-      options: --privileged --user root
+      options: --privileged --user root --rm
     env:
       HOME: /root
       PATH: /bin:/usr/bin:/usr/local/bin

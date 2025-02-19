@@ -27,3 +27,21 @@ tasks:
       - chmod +x install.sh
       - UV_INSTALL_DIR="{{.INSTALL_DIR}}" sudo -E ./install.sh
       - uv --version
+
+  test:
+    desc: "Test UV installation"
+    deps:
+      - task: test:version
+      - task: test:venv
+
+  test:version:
+    internal: true
+    cmds:
+      - test "$(uv --version 2>&1 | grep -c "uv")" -eq 1
+
+  test:venv:
+    internal: true
+    cmds:
+      - uv venv test-venv
+      - test -d test-venv
+      - rm -rf test-venv
