@@ -11,6 +11,17 @@ on:
       - '.github/workflows/test.yml'
 
 jobs:
+  set-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      taskfiles: ${{ steps.get-taskfiles.outputs.list }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: get-taskfiles
+        run: |
+          TASKFILES=$(ls -1 .taskfiles | jq -R -s -c 'split("\n")[:-1]')
+          echo "list=$TASKFILES" >> $GITHUB_OUTPUT
+
   test-main:
     runs-on: ubuntu-latest
     env:
@@ -36,12 +47,12 @@ jobs:
         run: $TASK_BIN --list
 
   test-taskfiles:
-    needs: test-main
+    needs: [test-main, set-matrix]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        taskfile: ${{ fromJSON(steps.set-matrix.outputs.taskfiles) }}
+        taskfile: ${{ fromJson(needs.set-matrix.outputs.taskfiles) }}
     env:
       SHELL: /bin/bash
       SHELL_RC: ${{ github.workspace }}/.bashrc
@@ -83,14 +94,3 @@ jobs:
               exit 1
             fi
           done
-
-  set-matrix:
-    runs-on: ubuntu-latest
-    outputs:
-      taskfiles: ${{ steps.get-taskfiles.outputs.list }}
-    steps:
-      - uses: actions/checkout@v4
-      - id: get-taskfiles
-        run: |
-          TASKFILES=$(ls -1 .taskfiles | jq -R -s -c 'split("\n")[:-1]')
-          echo "list=$TASKFILES" >> $GITHUB_OUTPUT
