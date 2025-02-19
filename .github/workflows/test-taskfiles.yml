@@ -11,6 +11,10 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      SHELL: /bin/bash
+      USER: runner
+      HOME: /home/runner
     steps:
       - uses: actions/checkout@v4
 
@@ -21,12 +25,14 @@ jobs:
 
       - name: Test specific taskfile
         if: inputs.taskfile != ''
+        shell: bash
         run: |
           echo "Testing ${{ inputs.taskfile }}..."
           task ${{ inputs.taskfile }}:install
 
       - name: Test all taskfiles
         if: inputs.taskfile == ''
+        shell: bash
         run: |
           for dir in .taskfiles/*; do
             if [ -f "$dir/Taskfile.yml" ]; then
