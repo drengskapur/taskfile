@@ -21,5 +21,4 @@ tasks:
       - sudo mv "{{.HOME}}/.bun/bin/bun" /usr/local/bin/
       - sudo chown root:root /usr/local/bin/bun
       - sudo chmod 755 /usr/local/bin/bun
-      - /usr/local/bin/bun --version
       - bun --version
