@@ -2,14 +2,10 @@
 ---
 version: "3"
 
-vars:
-  COMMAND_PREFIX:
-    sh: if [ "$(id -u)" != "0" ]; then echo "sudo"; fi
-
 tasks:
   default:
     deps:
-      - task: install
+      - install
 
   install:
     desc: Install rclone
@@ -24,9 +20,19 @@ tasks:
       - |
         {{.COMMAND_PREFIX}} apt-get update
       - |
-        {{.COMMAND_PREFIX}} apt-get install --no-install-recommends -y curl unzip
-      # Install rclone (exit code 3 means already up to date)
+        {{.COMMAND_PREFIX}} apt-get install --no-install-recommends -y fuse curl
+      # Force reinstall by temporarily moving binary
       - |
-        curl https://rclone.org/install.sh | {{.COMMAND_PREFIX}} bash || [ $? -eq 3 ]
+        if command -v rclone >/dev/null 2>&1; then
+          {{.COMMAND_PREFIX}} mv /usr/bin/rclone /usr/bin/rclone.bak
+        fi
+      # Install rclone
+      - |
+        curl https://rclone.org/install.sh | {{.COMMAND_PREFIX}} bash
+      # Cleanup backup if exists
+      - |
+        if [ -f /usr/bin/rclone.bak ]; then
+          {{.COMMAND_PREFIX}} rm -f /usr/bin/rclone.bak
+        fi
       # Verify installation
-      - /usr/bin/rclone --version
+      - /usr/bin/rclone version
