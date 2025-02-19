@@ -5,3 +5,9 @@ node_modules/
 
 # Task cache
 .task/
+
+# Logs and PIDs
+.logs/
+.pid/
+# Test logs
+test_logs/
