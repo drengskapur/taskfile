@@ -1,0 +1,121 @@
+name: Test All Tools
+
+on:
+  pull_request:
+    paths:
+      - '.taskfiles/**'
+      - '.github/workflows/test-tools.yml'
+      - 'Taskfile.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      tools: ${{ steps.get-tools.outputs.tools }}
+    container:
+      image: ubuntu:22.04
+      env:
+        SHELL: /bin/bash
+        DEBIAN_FRONTEND: noninteractive
+        USER: ubuntu
+        HOME: /home/ubuntu
+      options: --user root
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 1
+
+      - name: Setup base environment
+        run: |
+          # Create ubuntu user with sudo access
+          groupadd -r ubuntu
+          useradd -r -g ubuntu -d /home/ubuntu -m -s /bin/bash ubuntu
+          echo "ubuntu ALL=(ALL) NOPASSWD: /usr/bin/apt-get" > /etc/sudoers.d/ubuntu
+          chmod 0440 /etc/sudoers.d/ubuntu
+
+          # Create necessary directories
+          mkdir -p /etc/apt/apt.conf.d
+          echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache
+          
+          # Create user directories
+          mkdir -p /home/ubuntu/.local /home/ubuntu/.cache /home/ubuntu/.config /home/ubuntu/.docker
+          chown -R ubuntu:ubuntu /home/ubuntu
+          chmod -R u+rwX /home/ubuntu
+
+          # Update package lists and install minimal required packages
+          apt-get update -qq
+          apt-get install -y --no-install-recommends \
+            curl \
+            git \
+            jq \
+            sudo
+
+      - name: Install Task
+        run: |
+          sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b /usr/local/bin
+          chown -R ubuntu:ubuntu /usr/local/bin/task
+
+      - name: Get tool list
+        id: get-tools
+        run: |
+          tools=$(ls -1 .taskfiles/*/Taskfile.yml | cut -d'/' -f2 | jq -R -s -c 'split("\n")[:-1]')
+          echo "tools=$tools" >> $GITHUB_OUTPUT
+
+      - name: Cache base environment
+        uses: actions/cache@v3
+        with:
+          path: |
+            /var/cache/apt
+            /var/lib/apt/lists
+            /usr/local/bin/task
+            /etc/apt
+            /etc/sudoers.d
+          key: base-${{ github.sha }}
+          restore-keys: |
+            base-
+
+  test:
+    needs: setup
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        tool: ${{ fromJson(needs.setup.outputs.tools) }}
+
+    container:
+      image: ubuntu:22.04
+      env:
+        SHELL: /bin/bash
+        DEBIAN_FRONTEND: noninteractive
+        USER: ubuntu
+        HOME: /home/ubuntu
+      options: --user root
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 1
+
+      - name: Restore base environment
+        uses: actions/cache@v3
+        with:
+          path: |
+            /var/cache/apt
+            /var/lib/apt/lists
+            /usr/local/bin/task
+            /etc/apt
+            /etc/sudoers.d
+          key: base-${{ github.sha }}
+          restore-keys: |
+            base-
+
+      - name: Install and test ${{ matrix.tool }}
+        run: |
+          echo "Testing ${{ matrix.tool }}..."
+          runuser -u ubuntu -- task install:${{ matrix.tool }}
+          runuser -u ubuntu -- task test:${{ matrix.tool }}

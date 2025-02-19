@@ -1,0 +1,84 @@
+name: Test Mix Installation
+
+on:
+  push:
+    paths:
+      - ".taskfiles/mix/**"
+
+jobs:
+  test:
+    name: Test mix installation
+    runs-on: ubuntu-22.04
+    if: ${{ !github.event.act }} # Skip during local testing
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Cache installations
+        id: cache-installs
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.elixir-install/installs/otp/${{ env.OTP_VERSION }}
+            ~/.elixir-install/installs/elixir/${{ env.ELIXIR_VERSION }}-otp-${{ env.OTP_MAJOR_VERSION }}
+          key: ${{ runner.os }}-mix-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}
+
+      - name: Configure paths
+        run: |
+          OTP_PATH="$HOME/.elixir-install/installs/otp/$OTP_VERSION/bin"
+          ELIXIR_PATH="$HOME/.elixir-install/installs/elixir/$ELIXIR_VERSION-otp-$OTP_MAJOR_VERSION/bin"
+          echo "$OTP_PATH" >> $GITHUB_PATH
+          echo "$ELIXIR_PATH" >> $GITHUB_PATH
+
+      - name: Cache apt packages
+        id: cache-apt
+        uses: actions/cache@v3
+        with:
+          path: /var/cache/apt/archives
+          key: ${{ runner.os }}-apt-${{ hashFiles('**/test.yml') }}
+
+      - name: Cache Task binary
+        id: cache-task
+        uses: actions/cache@v3
+        with:
+          path: /usr/local/bin/task
+          key: ${{ runner.os }}-task-${{ hashFiles('**/test.yml') }}
+
+      - name: Install system dependencies
+        if: steps.cache-apt.outputs.cache-hit != 'true'
+        run: |
+          apt-get update
+          apt-get install -y curl jq unzip
+
+      - name: Install Task
+        if: steps.cache-task.outputs.cache-hit != 'true'
+        run: |
+          sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b /usr/local/bin
+
+      - name: Install mix
+        if: steps.cache-installs.outputs.cache-hit != 'true'
+        run: task install
+
+      - name: Verify installation
+        run: task verify
+
+  test-local:
+    name: Test mix installation (Local)
+    runs-on: ubuntu-22.04
+    if: ${{ github.event.act }} # Only run during local testing
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install system dependencies
+        run: |
+          apt-get update
+          apt-get install -y curl jq unzip
+
+      - name: Install Task
+        run: |
+          sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b /usr/local/bin
+
+      - name: Install mix
+        run: task install
+
+      - name: Verify installation
+        run: task verify
