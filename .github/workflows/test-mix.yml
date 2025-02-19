@@ -1,35 +1,67 @@
-name: mix
+name: Test mix Tasks
 
 on:
-  push:
-    paths:
-      - '.taskfiles/mix/**'
-      - '.github/workflows/mix.yml'
   pull_request:
     paths:
       - '.taskfiles/mix/**'
-      - '.github/workflows/mix.yml'
-  workflow_dispatch:
+      - '.github/workflows/test-mix.yml'
 
 jobs:
   test:
-    name: Test mix Tasks
+    name: Test mix Tasks (Ubuntu ${{ matrix.ubuntu }})
     runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        ubuntu: ["22.04"]
+
     container:
-      image: ubuntu:22.04
-      options: --user root
+      image: ubuntu:${{ matrix.ubuntu }}
+      env:
+        SHELL: /bin/bash
+        DEBIAN_FRONTEND: noninteractive
+        USER: ubuntu
+        HOME: /home/ubuntu
+
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: develop
-      - name: Install dependencies
+      - name: Setup environment
         run: |
           apt-get update
-          apt-get install -y curl jq sudo
+          apt-get install -y curl git sudo
+
+          # Create ubuntu user with proper Docker practices
+          groupadd -r ubuntu
+          useradd -r -g ubuntu -d /home/ubuntu -m -s /bin/bash ubuntu
+          echo "ubuntu ALL=(ALL) NOPASSWD: /usr/bin/apt-get" > /etc/sudoers.d/ubuntu
+          chmod 0440 /etc/sudoers.d/ubuntu
+
+          # Set proper ownership and permissions
+          chown -R ubuntu:ubuntu /home/ubuntu
+          chmod -R u+rwX /home/ubuntu
+
+      # - name: Cache dependencies
+      #   uses: actions/cache@v3
+      #   with:
+      #     path: |
+      #       ~/.elixir-install
+      #       ~/.mix
+      #       ~/.hex
+      #     key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
+      #     restore-keys: |
+      #       ${{ runner.os }}-mix-
+
       - name: Install Task
         run: |
-          curl -sL https://taskfile.dev/install.sh | sh
-          mv ./bin/task /usr/local/bin/
-          task --version
-      - name: List tasks
-        run: task --dir .taskfiles/mix --list-all
+          sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b /usr/local/bin
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run mix tasks
+        run: |
+          # Ensure workspace is accessible
+          chown -R ubuntu:ubuntu $GITHUB_WORKSPACE
+          
+          # Run as ubuntu with proper environment
+          runuser -u ubuntu -- /bin/bash -c "cd $GITHUB_WORKSPACE && task mix:install"
