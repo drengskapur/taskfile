@@ -2,22 +2,76 @@
 ---
 version: "3"
 
+vars:
+  METADATA: |
+    {
+      "description": "AWS CLI and utilities",
+      "category": "Cloud",
+      "homepage": "https://aws.amazon.com/cli/",
+      "platforms": ["linux", "darwin"],
+      "architectures": ["amd64", "arm64"]
+    }
+  OS:
+    sh: uname -s | tr '[:upper:]' '[:lower:]'
+  ARCH:
+    sh: |
+      case "$(uname -m)" in
+        x86_64) echo "amd64" ;;
+        aarch64) echo "arm64" ;;
+        *) echo "unsupported" ;;
+      esac
+  DOWNLOAD_URL:
+    sh: |
+      case "{{OS}}" in
+        linux)
+          case "{{ARCH}}" in
+            amd64) echo "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" ;;
+            arm64) echo "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" ;;
+          esac
+          ;;
+        darwin)
+          echo "https://awscli.amazonaws.com/AWSCLIV2.pkg"
+          ;;
+      esac
+
 tasks:
   default:
-    deps: 
+    deps:
       - task: install
 
   install:
     desc: "Install AWS CLI"
-    vars:
-      DOWNLOAD_URL: "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"
-    run: once
-    status:
-      - command -v aws >/dev/null 2>&1
+    preconditions:
+      - sh: test "{{OS}}" = "linux" -o "{{OS}}" = "darwin"
+        msg: "This task only supports Linux and macOS"
+      - sh: test "{{ARCH}}" = "amd64" -o "{{ARCH}}" = "arm64"
+        msg: "This task only supports amd64 and arm64 architectures"
+    cmds:
+      - task: install_{{OS}}
+      - aws --version
+
+  install_linux:
+    internal: true
     cmds:
       - defer: rm -f awscliv2.zip
       - defer: rm -rf aws
-      - curl -sLO "{{.DOWNLOAD_URL}}" -o awscliv2.zip
+      - curl -sL "{{.DOWNLOAD_URL}}" -o awscliv2.zip
       - unzip -q awscliv2.zip
       - sudo ./aws/install
+
+  install_darwin:
+    internal: true
+    cmds:
+      - curl -sL "{{.DOWNLOAD_URL}}" -o AWSCLIV2.pkg
+      - sudo installer -pkg AWSCLIV2.pkg -target /
+      - rm AWSCLIV2.pkg
+
+  verify:
+    desc: "Verify AWS CLI installation"
+    preconditions:
+      - sh: test "{{OS}}" = "linux" -o "{{OS}}" = "darwin"
+        msg: "This task only supports Linux and macOS"
+      - sh: test "{{ARCH}}" = "amd64" -o "{{ARCH}}" = "arm64"
+        msg: "This task only supports amd64 and arm64 architectures"
+    cmds:
       - aws --version

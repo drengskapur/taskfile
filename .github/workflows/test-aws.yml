@@ -1,4 +1,4 @@
-name: Test aws Installation
+name: "Install - aws"
 
 on:
   push:
@@ -10,18 +10,40 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
+  ubuntu-latest:
+    name: Ubuntu Latest
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/drengskapur/taskfile-tester:develop
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install Task
+        run: |
+          sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b /usr/local/bin
 
       - name: Configure Git
         run: git config --global --add safe.directory /home/user/taskfile
 
       - name: Install aws
-        run: task aws:install
+        run: cd .taskfiles/aws && task install
 
       - name: Verify aws Installation
-        run: task aws:verify
+        run: cd .taskfiles/aws && task verify
+
+  catthehacker:
+    name: catthehacker/ubuntu
+    runs-on: catthehacker/ubuntu:full
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Task
+        run: |
+          sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b /usr/local/bin
+
+      - name: Configure Git
+        run: git config --global --add safe.directory /home/user/taskfile
+
+      - name: Install aws
+        run: cd .taskfiles/aws && task install
+
+      - name: Verify aws Installation
+        run: cd .taskfiles/aws && task verify
