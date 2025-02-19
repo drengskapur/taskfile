@@ -3,6 +3,9 @@
 version: "3"
 
 tasks:
+  default:
+    deps: [install]
+
   install:
     desc: "Install Erlang and Elixir"
     vars:
@@ -90,38 +93,3 @@ tasks:
         fi
     status:
       - command -v "{{.HOME}}/.elixir-install/installs/elixir/{{.LATEST_ELIXIR_VERSION}}-otp-{{.LATEST_OTP_MAJOR_VERSION}}/bin/elixir"
-
-  dev:
-    desc: "Run development server"
-    cmds:
-      - mix deps.get
-      - mix clean
-      - mix compile
-      - mix phx.server
-
-  test:
-    desc: "Run tests"
-    aliases:
-      - test
-    cmds:
-      - mix test
-
-  deps:
-    desc: "Install dependencies"
-    cmds:
-      - mix deps.get
-
-  compile:
-    desc: "Compile project"
-    cmds:
-      - mix compile
-
-  format:
-    desc: "Format code"
-    cmds:
-      - mix format
-
-  clean:
-    desc: "Clean project"
-    cmds:
-      - mix clean
