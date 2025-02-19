@@ -1,0 +1,33 @@
+name: {{.WorkflowName}}
+
+on:
+  push:
+    paths:
+      - '.taskfiles/{{.TaskfileDir}}/**'
+      - '.github/workflows/{{.WorkflowName}}.yml'
+  pull_request:
+    paths:
+      - '.taskfiles/{{.TaskfileDir}}/**'
+      - '.github/workflows/{{.WorkflowName}}.yml'
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Test {{.WorkflowName}} Tasks
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        arch: [amd64, arm64]
+        include:
+          - os: macos-latest
+            arch: amd64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: arduino/setup-task@v1
+        with:
+          version: 3.x
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - run: task list
+      - run: task --dir .taskfiles/{{.TaskfileDir}} --list
+      - run: task --dir .taskfiles/{{.TaskfileDir}} --list-all

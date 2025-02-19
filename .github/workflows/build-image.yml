@@ -3,7 +3,7 @@ name: Build and Push Docker Image
 on:
   push:
     paths:
-      - '.infrastructure/ci/**'
+      - 'packages/taskfile-tester/src/**'
   workflow_dispatch:
 
 jobs:
@@ -29,5 +29,5 @@ jobs:
         uses: docker/bake-action@v4
         with:
           files: |
-            .infrastructure/ci/docker-bake.hcl
+            packages/taskfile-tester/src/docker-bake.hcl
           push: true

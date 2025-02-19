@@ -1,4 +1,4 @@
-name: Test uv Installation
+name: "Install - uv"
 
 on:
   push:
@@ -10,12 +10,34 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
+  ubuntu-latest:
+    name: Ubuntu Latest
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/drengskapur/taskfile-tester:develop
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install Task
+        run: |
+          sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b /usr/local/bin
+
+      - name: Configure Git
+        run: git config --global --add safe.directory /home/user/taskfile
+
+      - name: Install uv
+        run: task uv:install
+
+      - name: Verify uv Installation
+        run: task uv:verify
+
+  catthehacker:
+    name: catthehacker/ubuntu
+    runs-on: catthehacker/ubuntu:full
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Task
+        run: |
+          sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b /usr/local/bin
 
       - name: Configure Git
         run: git config --global --add safe.directory /home/user/taskfile

@@ -1,4 +1,4 @@
-name: Test k3s Installation
+name: "Install - k3s"
 
 on:
   push:
@@ -10,12 +10,34 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
+  ubuntu-latest:
+    name: Ubuntu Latest
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/drengskapur/taskfile-tester:develop
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install Task
+        run: |
+          sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b /usr/local/bin
+
+      - name: Configure Git
+        run: git config --global --add safe.directory /home/user/taskfile
+
+      - name: Install k3s
+        run: task k3s:install
+
+      - name: Verify k3s Installation
+        run: task k3s:verify
+
+  catthehacker:
+    name: catthehacker/ubuntu
+    runs-on: catthehacker/ubuntu:full
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Task
+        run: |
+          sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b /usr/local/bin
 
       - name: Configure Git
         run: git config --global --add safe.directory /home/user/taskfile

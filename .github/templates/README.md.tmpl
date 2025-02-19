@@ -1,0 +1,41 @@
+# Taskfiles
+
+A collection of reusable taskfiles for common development workflows.
+
+## Supported Platforms
+
+- Ubuntu (latest)
+- [catthehacker/ubuntu](https://github.com/catthehacker/docker_images) (latest)
+
+## Installation Status
+
+| Tool | Ubuntu Latest | catthehacker/ubuntu | Description |
+|------|--------------|---------------------|-------------|
+{{- range $taskfile := .Taskfiles }}
+| {{ $taskfile | lower }} | [![Status](https://github.com/drengskapur/taskfile/actions/workflows/test-{{ $taskfile | lower }}.yml/badge.svg?ubuntu=latest)](https://github.com/drengskapur/taskfile/actions/workflows/test-{{ $taskfile | lower }}.yml) | [![Status](https://github.com/drengskapur/taskfile/actions/workflows/test-{{ $taskfile | lower }}.yml/badge.svg?ubuntu=catthehacker)](https://github.com/drengskapur/taskfile/actions/workflows/test-{{ $taskfile | lower }}.yml) | {{ index $.Descriptions $taskfile }} |
+{{- end }}
+
+## Quick Install
+
+```bash
+# Install Task
+curl -sL https://taskfile.dev/install.sh | sh
+
+# Copy taskfile(s) to your project
+mkdir -p .taskfiles
+cp -r /path/to/taskfiles/* .taskfiles/
+
+# Include in your Taskfile.yml
+includes:
+  python3:
+    taskfile: .taskfiles/python3/Taskfile.yml
+    optional: true
+```
+
+## Development
+
+To update the workflow status indicators, you need a GitHub token with `repo` access:
+
+```bash
+export GITHUB_TOKEN=your_github_token
+cd packages/taskfile-tester/src && go run generate.go -type readme -root /path/to/taskfile

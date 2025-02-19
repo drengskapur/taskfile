@@ -6,16 +6,25 @@
       "dependsOn": ["^build"],
       "outputs": []
     },
-    "lint": {
-      "outputs": []
-    },
+    "lint": {},
     "dev": {
       "cache": false,
       "persistent": true
     },
+    "clean": {
+      "cache": false
+    },
+    "generate": {
+      "dependsOn": ["^build"]
+    },
+    "build:image": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
     "test": {
-      "dependsOn": ["build"],
-      "inputs": ["src/**/*.tsx", "src/**/*.ts", "test/**/*.ts", "test/**/*.tsx"]
+      "dependsOn": ["^build"],
+      "inputs": ["src/**/*.tsx", "src/**/*.ts", "test/**/*.ts", "test/**/*.tsx"],
+      "outputs": ["coverage/**"]
     }
   }
 }

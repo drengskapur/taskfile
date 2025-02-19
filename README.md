@@ -1,43 +1,59 @@
-# Taskfile Collection
+# Taskfiles
 
-A collection of taskfiles for common developer tools and applications.
+A collection of reusable taskfiles for common development workflows.
 
-## Installation Types
+## Supported Platforms
 
-Tasks in this collection are classified by their installation requirements using the `INSTALL_TYPE` comment at the top of each taskfile:
+- Ubuntu (latest)
+- [catthehacker/ubuntu](https://github.com/catthehacker/docker_images) (latest)
 
-### `INSTALL_TYPE: system`
-Requires sudo privileges for system-level integration. Examples:
-- Docker: Needs systemd service, container runtime access, and group management
-- K3s: Requires systemd service, network configuration, and system files
-- AWS CLI: Needs system-wide installation for credential management
-- DigitalOcean Metrics Agent: Runs as a system service
+## Installation Status
 
-### `INSTALL_TYPE: user`
-Can be installed without sudo in user space (typically ~/.local/bin). Examples:
-- Hadolint: Static binary, no special permissions needed
-- jq: Simple command-line tool
-- doctl: CLI tool without system integration
+| Tool | Ubuntu Latest | catthehacker/ubuntu | Description |
+|------|--------------|---------------------|-------------|
+| act | [![Status](https://github.com/drengskapur/taskfile/actions/workflows/test-act.yml/badge.svg?ubuntu=latest)](https://github.com/drengskapur/taskfile/actions/workflows/test-act.yml) | [![Status](https://github.com/drengskapur/taskfile/actions/workflows/test-act.yml/badge.svg?ubuntu=catthehacker)](https://github.com/drengskapur/taskfile/actions/workflows/test-act.yml) | Local GitHub Actions runner |
+| aws | [![Status](https://github.com/drengskapur/taskfile/actions/workflows/test-aws.yml/badge.svg?ubuntu=latest)](https://github.com/drengskapur/taskfile/actions/workflows/test-aws.yml) | [![Status](https://github.com/drengskapur/taskfile/actions/workflows/test-aws.yml/badge.svg?ubuntu=catthehacker)](https://github.com/drengskapur/taskfile/actions/workflows/test-aws.yml) | AWS CLI and utilities |
+| bun | [![Status](https://github.com/drengskapur/taskfile/actions/workflows/test-bun.yml/badge.svg?ubuntu=latest)](https://github.com/drengskapur/taskfile/actions/workflows/test-bun.yml) | [![Status](https://github.com/drengskapur/taskfile/actions/workflows/test-bun.yml/badge.svg?ubuntu=catthehacker)](https://github.com/drengskapur/taskfile/actions/workflows/test-bun.yml) | JavaScript runtime and package manager |
+| commitlint | [![Status](https://github.com/drengskapur/taskfile/actions/workflows/test-commitlint.yml/badge.svg?ubuntu=latest)](https://github.com/drengskapur/taskfile/actions/workflows/test-commitlint.yml) | [![Status](https://github.com/drengskapur/taskfile/actions/workflows/test-commitlint.yml/badge.svg?ubuntu=catthehacker)](https://github.com/drengskapur/taskfile/actions/workflows/test-commitlint.yml) | Commit message linting |
+| digitalocean | [![Status](https://github.com/drengskapur/taskfile/actions/workflows/test-digitalocean.yml/badge.svg?ubuntu=latest)](https://github.com/drengskapur/taskfile/actions/workflows/test-digitalocean.yml) | [![Status](https://github.com/drengskapur/taskfile/actions/workflows/test-digitalocean.yml/badge.svg?ubuntu=catthehacker)](https://github.com/drengskapur/taskfile/actions/workflows/test-digitalocean.yml) | DigitalOcean CLI and tools |
+| direnv | [![Status](https://github.com/drengskapur/taskfile/actions/workflows/test-direnv.yml/badge.svg?ubuntu=latest)](https://github.com/drengskapur/taskfile/actions/workflows/test-direnv.yml) | [![Status](https://github.com/drengskapur/taskfile/actions/workflows/test-direnv.yml/badge.svg?ubuntu=catthehacker)](https://github.com/drengskapur/taskfile/actions/workflows/test-direnv.yml) | Directory-specific environment variables |
+| docker | [![Status](https://github.com/drengskapur/taskfile/actions/workflows/test-docker.yml/badge.svg?ubuntu=latest)](https://github.com/drengskapur/taskfile/actions/workflows/test-docker.yml) | [![Status](https://github.com/drengskapur/taskfile/actions/workflows/test-docker.yml/badge.svg?ubuntu=catthehacker)](https://github.com/drengskapur/taskfile/actions/workflows/test-docker.yml) | Container runtime and management |
+| fnm | [![Status](https://github.com/drengskapur/taskfile/actions/workflows/test-fnm.yml/badge.svg?ubuntu=latest)](https://github.com/drengskapur/taskfile/actions/workflows/test-fnm.yml) | [![Status](https://github.com/drengskapur/taskfile/actions/workflows/test-fnm.yml/badge.svg?ubuntu=catthehacker)](https://github.com/drengskapur/taskfile/actions/workflows/test-fnm.yml) | Fast Node.js version manager |
+| go | [![Status](https://github.com/drengskapur/taskfile/actions/workflows/test-go.yml/badge.svg?ubuntu=latest)](https://github.com/drengskapur/taskfile/actions/workflows/test-go.yml) | [![Status](https://github.com/drengskapur/taskfile/actions/workflows/test-go.yml/badge.svg?ubuntu=catthehacker)](https://github.com/drengskapur/taskfile/actions/workflows/test-go.yml) | Go language toolchain |
+| hadolint | [![Status](https://github.com/drengskapur/taskfile/actions/workflows/test-hadolint.yml/badge.svg?ubuntu=latest)](https://github.com/drengskapur/taskfile/actions/workflows/test-hadolint.yml) | [![Status](https://github.com/drengskapur/taskfile/actions/workflows/test-hadolint.yml/badge.svg?ubuntu=catthehacker)](https://github.com/drengskapur/taskfile/actions/workflows/test-hadolint.yml) | Dockerfile linting |
+| helm | [![Status](https://github.com/drengskapur/taskfile/actions/workflows/test-helm.yml/badge.svg?ubuntu=latest)](https://github.com/drengskapur/taskfile/actions/workflows/test-helm.yml) | [![Status](https://github.com/drengskapur/taskfile/actions/workflows/test-helm.yml/badge.svg?ubuntu=catthehacker)](https://github.com/drengskapur/taskfile/actions/workflows/test-helm.yml) | Kubernetes package manager |
+| jq | [![Status](https://github.com/drengskapur/taskfile/actions/workflows/test-jq.yml/badge.svg?ubuntu=latest)](https://github.com/drengskapur/taskfile/actions/workflows/test-jq.yml) | [![Status](https://github.com/drengskapur/taskfile/actions/workflows/test-jq.yml/badge.svg?ubuntu=catthehacker)](https://github.com/drengskapur/taskfile/actions/workflows/test-jq.yml) | JSON processing utilities |
+| k3s | [![Status](https://github.com/drengskapur/taskfile/actions/workflows/test-k3s.yml/badge.svg?ubuntu=latest)](https://github.com/drengskapur/taskfile/actions/workflows/test-k3s.yml) | [![Status](https://github.com/drengskapur/taskfile/actions/workflows/test-k3s.yml/badge.svg?ubuntu=catthehacker)](https://github.com/drengskapur/taskfile/actions/workflows/test-k3s.yml) | Lightweight Kubernetes distribution |
+| mix | [![Status](https://github.com/drengskapur/taskfile/actions/workflows/test-mix.yml/badge.svg?ubuntu=latest)](https://github.com/drengskapur/taskfile/actions/workflows/test-mix.yml) | [![Status](https://github.com/drengskapur/taskfile/actions/workflows/test-mix.yml/badge.svg?ubuntu=catthehacker)](https://github.com/drengskapur/taskfile/actions/workflows/test-mix.yml) | Elixir build tool and package manager |
+| node | [![Status](https://github.com/drengskapur/taskfile/actions/workflows/test-node.yml/badge.svg?ubuntu=latest)](https://github.com/drengskapur/taskfile/actions/workflows/test-node.yml) | [![Status](https://github.com/drengskapur/taskfile/actions/workflows/test-node.yml/badge.svg?ubuntu=catthehacker)](https://github.com/drengskapur/taskfile/actions/workflows/test-node.yml) | Node.js runtime and npm |
+| pnpm | [![Status](https://github.com/drengskapur/taskfile/actions/workflows/test-pnpm.yml/badge.svg?ubuntu=latest)](https://github.com/drengskapur/taskfile/actions/workflows/test-pnpm.yml) | [![Status](https://github.com/drengskapur/taskfile/actions/workflows/test-pnpm.yml/badge.svg?ubuntu=catthehacker)](https://github.com/drengskapur/taskfile/actions/workflows/test-pnpm.yml) | Fast npm package manager |
+| python3 | [![Status](https://github.com/drengskapur/taskfile/actions/workflows/test-python3.yml/badge.svg?ubuntu=latest)](https://github.com/drengskapur/taskfile/actions/workflows/test-python3.yml) | [![Status](https://github.com/drengskapur/taskfile/actions/workflows/test-python3.yml/badge.svg?ubuntu=catthehacker)](https://github.com/drengskapur/taskfile/actions/workflows/test-python3.yml) | Python runtime and package management |
+| rclone | [![Status](https://github.com/drengskapur/taskfile/actions/workflows/test-rclone.yml/badge.svg?ubuntu=latest)](https://github.com/drengskapur/taskfile/actions/workflows/test-rclone.yml) | [![Status](https://github.com/drengskapur/taskfile/actions/workflows/test-rclone.yml/badge.svg?ubuntu=catthehacker)](https://github.com/drengskapur/taskfile/actions/workflows/test-rclone.yml) | Cloud storage sync tool |
+| terraform | [![Status](https://github.com/drengskapur/taskfile/actions/workflows/test-terraform.yml/badge.svg?ubuntu=latest)](https://github.com/drengskapur/taskfile/actions/workflows/test-terraform.yml) | [![Status](https://github.com/drengskapur/taskfile/actions/workflows/test-terraform.yml/badge.svg?ubuntu=catthehacker)](https://github.com/drengskapur/taskfile/actions/workflows/test-terraform.yml) | Infrastructure as Code |
+| ultracite | [![Status](https://github.com/drengskapur/taskfile/actions/workflows/test-ultracite.yml/badge.svg?ubuntu=latest)](https://github.com/drengskapur/taskfile/actions/workflows/test-ultracite.yml) | [![Status](https://github.com/drengskapur/taskfile/actions/workflows/test-ultracite.yml/badge.svg?ubuntu=catthehacker)](https://github.com/drengskapur/taskfile/actions/workflows/test-ultracite.yml) | Custom development tools |
+| uv | [![Status](https://github.com/drengskapur/taskfile/actions/workflows/test-uv.yml/badge.svg?ubuntu=latest)](https://github.com/drengskapur/taskfile/actions/workflows/test-uv.yml) | [![Status](https://github.com/drengskapur/taskfile/actions/workflows/test-uv.yml/badge.svg?ubuntu=catthehacker)](https://github.com/drengskapur/taskfile/actions/workflows/test-uv.yml) | Fast Python package installer |
 
-### `INSTALL_TYPE: optional`
-Can work without sudo but may need it for certain features. Examples:
-- Helm: Optional system-wide plugins
-- Terraform: May need sudo for certain providers
-- rclone: Optional mounting operations
+## Quick Install
 
-## Usage
+```bash
+# Install Task
+curl -sL https://taskfile.dev/install.sh | sh
 
-Each tool's taskfile can be included in your project's Taskfile.yml:
+# Copy taskfile(s) to your project
+mkdir -p .taskfiles
+cp -r /path/to/taskfiles/* .taskfiles/
 
-```yaml
+# Include in your Taskfile.yml
 includes:
-  docker: .taskfiles/docker/Taskfile.yml
-  k3s: .taskfiles/k3s/Taskfile.yml
-  # ... other tools
+  python3:
+    taskfile: .taskfiles/python3/Taskfile.yml
+    optional: true
 ```
 
-Then run tasks with:
+## Development
+
+To update the workflow status indicators, you need a GitHub token with `repo` access:
+
 ```bash
-task docker:install
-task k3s:install
-# etc
+export GITHUB_TOKEN=your_github_token
+cd packages/taskfile-tester/src && go run generate.go -type readme -root /path/to/taskfile

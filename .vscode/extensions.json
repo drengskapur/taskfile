@@ -4,6 +4,7 @@
     "github.copilot-chat",
     "redhat.vscode-yaml",
     "task.vscode-task",
-    "github.vscode-github-actions"
+    "github.vscode-github-actions",
+    "golang.go"
   ]
 }

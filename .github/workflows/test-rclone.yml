@@ -1,4 +1,4 @@
-name: Test rclone Installation
+name: "Install - rclone"
 
 on:
   push:
@@ -10,12 +10,34 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
+  ubuntu-latest:
+    name: Ubuntu Latest
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/drengskapur/taskfile-tester:develop
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install Task
+        run: |
+          sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b /usr/local/bin
+
+      - name: Configure Git
+        run: git config --global --add safe.directory /home/user/taskfile
+
+      - name: Install rclone
+        run: task rclone:install
+
+      - name: Verify rclone Installation
+        run: task rclone:verify
+
+  catthehacker:
+    name: catthehacker/ubuntu
+    runs-on: catthehacker/ubuntu:full
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Task
+        run: |
+          sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b /usr/local/bin
 
       - name: Configure Git
         run: git config --global --add safe.directory /home/user/taskfile

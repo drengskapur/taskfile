@@ -11,7 +11,8 @@ vars:
 
 tasks:
   default:
-    deps: [install]
+    deps:
+      - task: install
 
   download:
     internal: true
@@ -21,7 +22,8 @@ tasks:
 
   verify:
     internal: true
-    deps: [download]
+    deps:
+      - task: download
     cmds:
       - test -f {{.TMP_DIR}}/install.sh
 
