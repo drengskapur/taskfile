@@ -1,53 +1,35 @@
 # yaml-language-server: $schema=https://taskfile.dev/schema.json
 ---
-version: "3"
+version: '3'
 
 vars:
-  TASKFILE_DIR:
-    sh: pwd
-  ROOT_DIR:
-    sh: git rev-parse --show-toplevel
+  IMAGE_NAME: ghcr.io/drengskapur/taskfile-tester
+  IMAGE_TAG: develop
 
 tasks:
-  # Testing tasks
-  act:matrix:test:
-    desc: Run matrix testing for a specific tool
-    vars:
-      TOOL:
-        sh: echo "$TOOL"
+  default:
+    deps: [build]
+
+  build:
+    desc: Build the act runner image
+    cmds:
+      - docker build -t {{.IMAGE_NAME}}:{{.IMAGE_TAG}} .
+
+  test:
+    desc: Test a specific taskfile in multiple OS environments
+    deps: [build]
     cmds:
       - |
-        if [ -z "$TOOL" ]; then
-          echo "Error: TOOL variable is required"
-          echo "Usage: task act:matrix:test TOOL=<toolname>"
-          exit 1
-        fi
-        
-        cd {{.ROOT_DIR}} && act -W .github/workflows/test-{{.TOOL}}.yml \
-          -P ubuntu-latest=ghcr.io/catthehacker/ubuntu:act-latest \
-          -P catthehacker/ubuntu:full=ghcr.io/catthehacker/ubuntu:act-latest
+        TASKFILE={{.CLI_ARGS}} docker compose up \
+          --abort-on-container-exit \
+          --exit-code-from act-runner
 
-  # Workflow generation tasks
-  workflow:generate:
-    desc: Generate GitHub workflow for a specific taskfile
-    deps: ['../../../:go:install']
+  generate:
+    desc: Generate workflow files
     cmds:
-      - go run generate.go -type workflow -taskfile {{.TASKFILE_DIR}} -root {{.ROOT_DIR}}
+      - go run generate.go -type workflow -taskfile {{.CLI_ARGS}}
 
-  workflows:generate:
-    desc: Generate GitHub workflows for all taskfiles
-    deps: ['../../../:go:install']
+  update:
+    desc: Update all workflow files
     cmds:
-      - |
-        for dir in {{.ROOT_DIR}}/.taskfiles/*/; do
-          if [ -d "$dir" ]; then
-            task: workflow:generate TASKFILE_DIR="$dir"
-          fi
-        done
-
-  # README tasks
-  readme:update:
-    desc: Update README with taskfile status badges
-    deps: ['../../../:go:install']
-    cmds:
-      - go run generate.go -type readme -root {{.ROOT_DIR}}
+      - ./update_workflows.sh

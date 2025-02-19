@@ -1,0 +1,16 @@
+{
+  "containers": [
+    {
+      "image": "ubuntu:22.04",
+      "install": "apt-get update && apt-get install -y curl"
+    },
+    {
+      "image": "alpine:latest",
+      "install": "apk add --no-cache curl"
+    },
+    {
+      "image": "fedora:latest",
+      "install": "dnf install -y curl"
+    }
+  ]
+}

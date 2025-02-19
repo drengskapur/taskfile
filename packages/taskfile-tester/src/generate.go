@@ -107,13 +107,37 @@ func generateWorkflow(rootDir, taskfileDir string) {
 		TaskfileDir:  taskfileDir,
 	}
 
-	tmpl, err := template.ParseFiles(filepath.Join(rootDir, ".github/templates/workflow.yml.tmpl"))
+	// Get absolute path to root directory
+	absRootDir, err := filepath.Abs(rootDir)
+	if err != nil {
+		fmt.Printf("Error getting absolute path: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("absRootDir: %s\n", absRootDir)
+
+	// Get path to project root (3 levels up from current directory)
+	projectRoot := filepath.Join(absRootDir, "../../..")
+
+	fmt.Printf("projectRoot: %s\n", projectRoot)
+
+	// Construct template path relative to project root
+	templatePath := filepath.Join(projectRoot, ".github/templates/workflow.yml.tmpl")
+
+	fmt.Printf("templatePath: %s\n", templatePath)
+
+	tmpl, err := template.ParseFiles(templatePath)
 	if err != nil {
 		fmt.Printf("Error parsing workflow template: %v\n", err)
 		os.Exit(1)
 	}
 
-	outFile, err := os.Create(filepath.Join(rootDir, ".github/workflows", taskfileDir+".yml"))
+	// Construct output path relative to project root
+	outPath := filepath.Join(projectRoot, ".github/workflows", "test-"+taskfileDir+".yml")
+
+	fmt.Printf("outPath: %s\n", outPath)
+
+	outFile, err := os.Create(outPath)
 	if err != nil {
 		fmt.Printf("Error creating workflow file: %v\n", err)
 		os.Exit(1)

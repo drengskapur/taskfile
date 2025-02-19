@@ -1,9 +1,5 @@
 FROM catthehacker/ubuntu:act-latest
 
-ARG TASK_VERSION=3.41.0
-ARG ACT_VERSION=0.2.56
-
-# Install additional dependencies
 RUN apt-get update && apt-get install -y \
     curl \
     wget \
@@ -11,35 +7,43 @@ RUN apt-get update && apt-get install -y \
     jq \
     unzip \
     python3 \
-    python3-pip \
-    python3-venv \
+    sudo \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Task
 RUN curl -sL https://taskfile.dev/install.sh | sh \
     && mv ./bin/task /usr/local/bin/
 
-# Install act
-RUN curl -sL "https://github.com/nektos/act/releases/download/v${ACT_VERSION}/act_Linux_x86_64.tar.gz" | tar xz \
-    && mv act /usr/local/bin/act \
-    && chmod +x /usr/local/bin/act
+RUN curl -sL "https://github.com/nektos/act/releases/download/v0.2.74/act_Linux_x86_64.tar.gz" | \
+    tar xz -C /usr/local/bin act
 
-# Create .actrc
-RUN --mount=type=bind <<EOT
---platform ubuntu-latest=ghcr.io/drengskapur/taskfile-tester:develop
---container-architecture linux/amd64
---env-file .env
--s GITHUB_TOKEN
+# Create a non-root user with the same UID/GID as the host user
+RUN groupadd -g 1000 runner && \
+    useradd -u 1000 -g runner -m runner && \
+    chown -R runner:runner /home/runner && \
+    echo "runner ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+# Configure act for non-root user
+RUN mkdir -p /home/runner/.config/act && \
+    <<EOF cat > /home/runner/.config/act/actrc
+-P ubuntu-latest=catthehacker/ubuntu:act-latest
+-P ubuntu-22.04=catthehacker/ubuntu:act-22.04
+-P ubuntu-20.04=catthehacker/ubuntu:act-20.04
+-P ubuntu-18.04=catthehacker/ubuntu:act-18.04
 --bind
---use-gitignore
-EOT tee /root/.actrc
+--env RUNNER_TOOL_CACHE=/tmp/tools
+EOF
 
 # Set environment variables
 ENV SHELL=/bin/bash \
     TERM=xterm-256color \
-    PATH="/usr/local/bin:${PATH}"
+    PATH="/usr/local/bin:${PATH}" \
+    DEBIAN_FRONTEND=noninteractive
+
+# Set ownership of act config
+RUN chown -R runner:runner /home/runner/.config
 
 WORKDIR /workspace
 
-# The container needs to be run with --privileged and -v /var/run/docker.sock:/var/run/docker.sock
-ENTRYPOINT ["/usr/local/bin/act"]
+USER runner
+
+ENTRYPOINT ["act"]

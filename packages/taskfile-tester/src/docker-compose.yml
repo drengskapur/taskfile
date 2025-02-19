@@ -1,0 +1,32 @@
+services:
+  act-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ghcr.io/drengskapur/taskfile-tester:develop
+    container_name: taskfile-act-runner
+    privileged: true
+    group_add:
+      - "${DOCKER_GID:-999}"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ../../..:/github/workspace:delegated
+      - type: bind
+        source: /usr/bin/docker
+        target: /usr/bin/docker
+    environment:
+      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - GITHUB_WORKSPACE=/github/workspace
+      - TASKFILE=${TASKFILE:-mix}
+      - ACT_PLATFORM=ubuntu-latest
+      - USER_UID=1000
+      - USER_GID=1000
+      - GITHUB_WORKFLOW=test-${TASKFILE:-mix}
+      - ACT_SKIP_CHECKOUT=true
+      - RUNNER_TEMP=/tmp
+      - RUNNER_TOOL_CACHE=/tmp/tools
+      - RUNNER_WORKSPACE=/github/workspace
+    working_dir: /github/workspace
+    entrypoint: ["act"]
+    command: ["-W", "${WORKFLOW_FILE:-.github/workflows/test-${TASKFILE:-mix}.yml}", "--bind"]

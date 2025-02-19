@@ -2,16 +2,51 @@
 ---
 version: "3"
 
+vars:
+  METADATA: |
+    {
+      "description": "Elixir Mix Build Tool",
+      "category": "Development",
+      "homepage": "https://elixir-lang.org/",
+      "platforms": ["linux", "darwin"],
+      "architectures": ["amd64", "arm64"]
+    }
+  OS:
+    sh: uname -s | tr '[:upper:]' '[:lower:]'
+  ARCH:
+    sh: |
+      case "$(uname -m)" in
+        x86_64) echo "amd64" ;;
+        aarch64) echo "arm64" ;;
+        *) echo "unsupported" ;;
+      esac
+  HOME:
+    sh: echo $HOME
+
 tasks:
   default:
     deps: 
       - task: install
 
+  install:deps:
+    internal: true
+    cmds:
+      - |
+        if ! command -v jq >/dev/null 2>&1; then
+          sudo apt-get update && sudo apt-get install -y jq curl
+        fi
+
   install:
     desc: "Install Erlang and Elixir"
     deps: 
+      - task: install:deps
       - task: erlang-install
       - task: elixir-install
+    preconditions:
+      - sh: test "{{OS}}" = "linux" -o "{{OS}}" = "darwin"
+        msg: "This task only supports Linux and macOS"
+      - sh: test "{{ARCH}}" = "amd64" -o "{{ARCH}}" = "arm64"
+        msg: "This task only supports amd64 and arm64 architectures"
     status:
       - command -v mix >/dev/null 2>&1
     cmds:
@@ -22,12 +57,8 @@ tasks:
     desc: "Install Erlang"
     internal: true
     vars:
-      HOME:
-        sh: echo $HOME
       LATEST_OTP_VERSION:
-        sh: >
-          curl -s https://api.github.com/repos/erlang/otp/releases |
-          jq -r '.[0] | .tag_name' | awk -F'-' '{print $2}'
+        sh: curl -s https://api.github.com/repos/erlang/otp/releases | jq -r '.[0] | .tag_name' | awk -F'-' '{print $2}'
       LATEST_OTP_MAJOR_VERSION:
         sh: echo "{{.LATEST_OTP_VERSION}}" | awk -F'.' '{print $1}'
       OTP_PATH: "export PATH={{.HOME}}/.elixir-install/installs/otp/{{.LATEST_OTP_VERSION}}/bin:$PATH"
@@ -51,20 +82,12 @@ tasks:
     deps:
       - task: erlang-install
     vars:
-      HOME:
-        sh: echo $HOME
       LATEST_ELIXIR_VERSION:
-        sh: >
-          curl -s https://api.github.com/repos/elixir-lang/elixir/releases |
-          jq -r '.[].tag_name | select(test("^v[0-9]+\\.[0-9]+\\.[0-9]+$")) |
-          sub("^v"; "")' |
-          head -n 1
-      LATEST_OTP_MAJOR_VERSION:
-        sh: echo "{{erlang-install.LATEST_OTP_VERSION}}" | awk -F'.' '{print $1}'
-      ELIXIR_PATH: "export PATH={{.HOME}}/.elixir-install/installs/elixir/{{.LATEST_ELIXIR_VERSION}}-otp-{{.LATEST_OTP_MAJOR_VERSION}}/bin:$PATH"
+        sh: curl -s https://api.github.com/repos/elixir-lang/elixir/releases/latest | jq -r '.tag_name | ltrimstr("v")'
+      ELIXIR_PATH: "export PATH={{.HOME}}/.elixir-install/installs/elixir/{{.LATEST_ELIXIR_VERSION}}/bin:$PATH"
     run: once
     status:
-      - command -v "{{.HOME}}/.elixir-install/installs/elixir/{{.LATEST_ELIXIR_VERSION}}-otp-{{.LATEST_OTP_MAJOR_VERSION}}/bin/elixir"
+      - command -v "{{.HOME}}/.elixir-install/installs/elixir/{{.LATEST_ELIXIR_VERSION}}/bin/elixir"
     cmds:
       - curl -fsSLO https://raw.githubusercontent.com/elixir-lang/elixir-lang.github.com/main/install.sh
       - defer: rm -f install.sh
@@ -73,8 +96,13 @@ tasks:
       - |
         if ! grep -q "{{.ELIXIR_PATH}}" "{{.HOME}}/.bashrc"; then
           echo '{{.ELIXIR_PATH}}' >> "{{.HOME}}/.bashrc"
-          export PATH={{.HOME}}/.elixir-install/installs/elixir/{{.LATEST_ELIXIR_VERSION}}-otp-{{.LATEST_OTP_MAJOR_VERSION}}/bin:$PATH
+          export PATH={{.HOME}}/.elixir-install/installs/elixir/{{.LATEST_ELIXIR_VERSION}}/bin:$PATH
         fi
+
+  verify:
+    desc: "Verify mix installation"
+    cmds:
+      - mix --version
 
   update:
     desc: "Update Erlang and Elixir"
@@ -89,12 +117,8 @@ tasks:
     desc: "Update Erlang"
     internal: true
     vars:
-      HOME:
-        sh: echo $HOME
       LATEST_OTP_VERSION:
-        sh: >
-          curl -s https://api.github.com/repos/erlang/otp/releases |
-          jq -r '.[0] | .tag_name' | awk -F'-' '{print $2}'
+        sh: curl -s https://api.github.com/repos/erlang/otp/releases | jq -r '.[0] | .tag_name' | awk -F'-' '{print $2}'
       LATEST_OTP_MAJOR_VERSION:
         sh: echo "{{.LATEST_OTP_VERSION}}" | awk -F'.' '{print $1}'
       OTP_PATH: "export PATH={{.HOME}}/.elixir-install/installs/otp/{{.LATEST_OTP_VERSION}}/bin:$PATH"
@@ -118,14 +142,8 @@ tasks:
     deps:
       - task: erlang-update
     vars:
-      HOME:
-        sh: echo $HOME
       LATEST_ELIXIR_VERSION:
-        sh: >
-          curl -s https://api.github.com/repos/elixir-lang/elixir/releases |
-          jq -r '.[].tag_name | select(test("^v[0-9]+\\.[0-9]+\\.[0-9]+$")) |
-          sub("^v"; "")' |
-          head -n 1
+        sh: curl -s https://api.github.com/repos/elixir-lang/elixir/releases/latest | jq -r '.tag_name | ltrimstr("v")'
       LATEST_OTP_MAJOR_VERSION:
         sh: echo "{{erlang-update.LATEST_OTP_VERSION}}" | awk -F'.' '{print $1}'
       ELIXIR_PATH: "export PATH={{.HOME}}/.elixir-install/installs/elixir/{{.LATEST_ELIXIR_VERSION}}-otp-{{.LATEST_OTP_MAJOR_VERSION}}/bin:$PATH"
