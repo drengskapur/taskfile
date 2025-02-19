@@ -8,10 +8,9 @@ tasks:
       - task: install
 
   install:
-    desc: "Install rclone"
-    summary: Install rclone and FUSE support for cloud storage mounting
-    run: once
-    deps: [fuse:install]
+    desc: "Install rclone and FUSE"
+    deps: 
+      - fuse-install
     status:
       - command -v rclone >/dev/null 2>&1
     cmds:
@@ -27,10 +26,9 @@ tasks:
       - rclone selfupdate
       - echo "rclone has been updated to the latest version"
 
-  fuse:install:
+  fuse-install:
     internal: true
     desc: "Install FUSE support"
-    summary: Install FUSE dependencies required for mounting cloud storage
     run: once
     status:
       - command -v fusermount >/dev/null 2>&1
