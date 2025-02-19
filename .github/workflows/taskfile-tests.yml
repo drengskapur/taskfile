@@ -1,15 +1,17 @@
-name: Test Taskfiles
+name: Taskfile Tests
 
 on:
   workflow_dispatch:
     inputs:
       taskfile:
-        description: 'Specific taskfile to test (leave empty to test all)'
+        description: 'Taskfile to test (leave empty to test all)'
         required: false
         type: string
+        default: ''
 
 jobs:
   test:
+    name: Run Taskfile Tests
     runs-on: ubuntu-latest
     env:
       SHELL: /bin/bash
