@@ -13,14 +13,24 @@ tasks:
 
   install:
     desc: Install rclone
+    vars:
+      COMMAND_PREFIX:
+        sh: if [ "$(id -u)" != "0" ]; then echo "sudo"; fi
     run: once
     status:
       - command -v rclone
     cmds:
+      # Install dependencies
       - |
         {{.COMMAND_PREFIX}} apt-get update
       - |
-        {{.COMMAND_PREFIX}} apt-get install -y fuse
+        {{.COMMAND_PREFIX}} apt-get install --no-install-recommends -y curl
+      # Remove existing rclone if present
       - |
-        curl https://rclone.org/install.sh | {{.COMMAND_PREFIX}} bash
-      - rclone version
+        if command -v rclone >/dev/null 2>&1; then
+          {{.COMMAND_PREFIX}} rm -f /usr/bin/rclone
+          {{.COMMAND_PREFIX}} rm -f /usr/local/bin/rclone
+        fi
+      # Install rclone
+      - curl https://rclone.org/install.sh | {{.COMMAND_PREFIX}} bash
+      - /usr/bin/rclone --version
