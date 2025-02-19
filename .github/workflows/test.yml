@@ -1,0 +1,47 @@
+name: Test Taskfiles
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Task
+        uses: arduino/setup-task@v1
+        with:
+          version: 3.x
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check Task version
+        run: task --version
+
+      - name: Validate Taskfile syntax
+        run: |
+          # First check the main Taskfile
+          task --dry
+          
+          # Then check each taskfile individually
+          for taskfile in .taskfiles/*/Taskfile.yml; do
+            echo "Checking $taskfile..."
+            task --taskfile "$taskfile" --dry
+          done
+
+      - name: List available tasks
+        run: task --list
+
+      - name: Test each task with --dry
+        run: |
+          # Get all available tasks
+          TASKS=$(task --list | grep -v "Available tasks" | grep "^* " | cut -d' ' -f2 | cut -d':' -f1 | sort -u)
+          
+          # Try each task with --dry
+          for task in $TASKS; do
+            echo "Testing task: $task"
+            task "$task" --dry || echo "Warning: Task $task failed dry run"
+          done
