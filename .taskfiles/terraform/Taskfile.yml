@@ -2,8 +2,6 @@
 ---
 version: "3"
 
-vars:
-
 tasks:
   default:
     deps: 
@@ -18,9 +16,8 @@ tasks:
     run: once
     status:
       - command -v terraform >/dev/null 2>&1
-    defer:
-      - rm -f terraform_{{.LATEST_VERSION}}_linux_amd64.zip
     cmds:
+      - defer: rm -f terraform_{{.LATEST_VERSION}}_linux_amd64.zip
       - curl -sLO "{{.DOWNLOAD_URL}}"
       - unzip -o terraform_{{.LATEST_VERSION}}_linux_amd64.zip
       - sudo mv terraform /usr/local/bin/
