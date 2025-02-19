@@ -13,23 +13,23 @@ tasks:
       LATEST_VERSION:
         sh: curl -s https://api.github.com/repos/helm/helm/releases/latest | jq -r '.tag_name | ltrimstr("v")'
       DOWNLOAD_URL: "https://get.helm.sh/helm-v{{.LATEST_VERSION}}-linux-amd64.tar.gz"
+      COMMAND_PREFIX: "sudo"
     run: once
     status:
-      - command -v helm >/dev/null 2>&1
+      - command -v helm
     cmds:
       - defer: rm -f helm-v{{.LATEST_VERSION}}-linux-amd64.tar.gz
-      - curl -sLO "{{.DOWNLOAD_URL}}"
-      - tar xf helm-v{{.LATEST_VERSION}}-linux-amd64.tar.gz
+      # Install dependencies
+      - "{{.COMMAND_PREFIX}} apt-get update"
+      - "{{.COMMAND_PREFIX}} apt-get install -y jq"
+      # Download and install
+      - curl -fsSLo helm.tar.gz "{{.DOWNLOAD_URL}}"
+      - tar xf helm.tar.gz
+      - chmod 755 linux-amd64/helm
       - |
-        if [ "$(id -u)" != "0" ]; then
-          sudo mv linux-amd64/helm /usr/local/bin/
-          sudo chown root:root /usr/local/bin/helm
-          sudo chmod 755 /usr/local/bin/helm
-        else
-          mv linux-amd64/helm /usr/local/bin/
-          chown root:root /usr/local/bin/helm
-          chmod 755 /usr/local/bin/helm
-        fi
+        {{.COMMAND_PREFIX}} mv linux-amd64/helm /usr/local/bin/
+      - |
+        {{.COMMAND_PREFIX}} chown root:root /usr/local/bin/helm
       - helm version
 
   test:
@@ -42,12 +42,12 @@ tasks:
         # Initialize helm repo
         helm repo add stable https://charts.helm.sh/stable
         helm repo update
-        
+
         # Create a test chart
         helm create test-chart
-        
+
         # Test chart linting
         helm lint test-chart
-        
+
         # Clean up
         rm -rf test-chart

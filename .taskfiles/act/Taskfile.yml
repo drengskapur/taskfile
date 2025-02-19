@@ -5,59 +5,40 @@ version: "3"
 vars:
   HOME:
     sh: echo $HOME
+  ACTRC: |-
+    -P ubuntu-latest=ghcr.io/catthehacker/ubuntu:act-latest
+    -P ubuntu-22.04=ghcr.io/catthehacker/ubuntu:act-22.04
+    -P ubuntu-20.04=ghcr.io/catthehacker/ubuntu:act-20.04
 
 tasks:
   default:
     deps:
       - task: install
 
-  setup:
-    desc: "Install and configure act"
-    deps:
-      - task: install
-      - task: setup:config
-
   install:
     desc: "Install act"
     vars:
+      COMMAND_PREFIX:
+        sh: if [ "$(id -u)" != "0" ]; then echo "sudo"; fi
       LATEST_VERSION:
         sh: curl -s https://api.github.com/repos/nektos/act/releases/latest | jq -r '.tag_name | ltrimstr("v")'
-      DOWNLOAD_URL: "https://github.com/nektos/act/releases/download/v{{.LATEST_VERSION}}/act_Linux_x86_64.tar.gz"
+      DOWNLOAD_URL: https://github.com/nektos/act/releases/download/v{{.LATEST_VERSION}}/act_Linux_x86_64.tar.gz
     run: once
-    status:
-      - command -v act >/dev/null 2>&1
     cmds:
-      - defer: rm -f act_Linux_x86_64.tar.gz
-      - curl -sLO "{{.DOWNLOAD_URL}}"
+      - defer: rm -rf act_Linux_x86_64.tar.gz LICENSE README.md
+      - |
+        {{.COMMAND_PREFIX}} apt-get update
+      - |
+        {{.COMMAND_PREFIX}} apt-get install -y jq
+      - curl -sLo act_Linux_x86_64.tar.gz "{{.DOWNLOAD_URL}}"
       - tar xf act_Linux_x86_64.tar.gz
       - |
-        if [ "$(id -u)" != "0" ]; then
-          sudo mv act /usr/local/bin/
-          sudo chown root:root /usr/local/bin/act
-          sudo chmod 755 /usr/local/bin/act
-        else
-          mv act /usr/local/bin/
-          chown root:root /usr/local/bin/act
-          chmod 755 /usr/local/bin/act
-        fi
-      - act --version
-      - echo "act version {{.LATEST_VERSION}} installed"
-
-  setup:config:
-    desc: "Configure act defaults"
-    run: once
-    status:
-      - test -f "{{.HOME}}/.actrc"
-    cmds:
+        {{.COMMAND_PREFIX}} chmod 755 act
       - |
-        cat > "{{.HOME}}/.actrc" << 'EOF'
-        -P ubuntu-latest=ghcr.io/catthehacker/ubuntu:act-latest
-        -P ubuntu-22.04=ghcr.io/catthehacker/ubuntu:act-22.04
-        -P ubuntu-20.04=ghcr.io/catthehacker/ubuntu:act-20.04
-        EOF
-
-  test:
-    desc: "Test act installation"
-    cmds:
-      - command -v act >/dev/null 2>&1 || (echo "act not found" && exit 1)
-      - act --version
+        {{.COMMAND_PREFIX}} mkdir -p /usr/local/bin
+      - |
+        {{.COMMAND_PREFIX}} mv act /usr/local/bin/act
+      - |
+        {{.COMMAND_PREFIX}} chown root:root /usr/local/bin/act
+      - echo "{{.ACTRC}}" > "{{.HOME}}/.actrc"
+      - /usr/local/bin/act --version

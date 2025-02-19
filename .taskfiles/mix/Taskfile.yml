@@ -3,126 +3,48 @@
 version: "3"
 
 vars:
-  METADATA: |
-    {
-      "description": "Elixir Mix Build Tool",
-      "category": "Development",
-      "homepage": "https://elixir-lang.org/",
-      "platforms": ["linux", "darwin"],
-      "architectures": ["amd64", "arm64"]
-    }
-  OS:
-    sh: uname -s | tr '[:upper:]' '[:lower:]'
-  ARCH:
-    sh: |
-      case "$(uname -m)" in
-        x86_64) echo "amd64" ;;
-        aarch64) echo "arm64" ;;
-        *) echo "unsupported" ;;
-      esac
   HOME:
     sh: echo $HOME
-
-env:
-  OTP_VERSION: "25.3.2"
-  OTP_MAJOR_VERSION: "25"
-  ELIXIR_VERSION: "1.14.5"
+  COMMAND_PREFIX:
+    sh: if [ "$(id -u)" != "0" ]; then echo "sudo"; else echo ""; fi
 
 tasks:
   default:
-    deps: [install]
-
-  install:deps:
-    internal: true
-    deps: [install:deps:jq, install:deps:curl]
-
-  install:deps:jq:
-    internal: true
-    status:
-      - command -v jq >/dev/null 2>&1
-    cmds:
-      - sudo apt-get update
-      - sudo apt-get install -y jq
-
-  install:deps:curl:
-    internal: true
-    status:
-      - command -v curl >/dev/null 2>&1
-    cmds:
-      - sudo apt-get update
-      - sudo apt-get install -y curl
-
-  install:
-    desc: "Install Erlang and Elixir"
-    deps: [install:deps]
-    preconditions:
-      - sh: test "{{OS}}" = "linux" -o "{{OS}}" = "darwin"
-        msg: "This task only supports Linux and macOS"
-    cmds:
-      - |
-        if [ "$(id -u)" != "0" ]; then
-          sudo curl -fsSLO https://raw.githubusercontent.com/elixir-lang/elixir-lang.github.com/main/install.sh
-          sudo chmod +x install.sh
-          sudo ./install.sh elixir@$ELIXIR_VERSION otp@$OTP_VERSION
-          sudo rm install.sh
-        else
-          curl -fsSLO https://raw.githubusercontent.com/elixir-lang/elixir-lang.github.com/main/install.sh
-          chmod +x install.sh
-          ./install.sh elixir@$ELIXIR_VERSION otp@$OTP_VERSION
-          rm install.sh
-        fi
-
-  verify:
-    desc: "Verify installation"
-    deps: [install, configure-path]
-    cmds:
-      - |
-        OTP_PATH="$HOME/.elixir-install/installs/otp/$OTP_VERSION/bin"
-        ELIXIR_PATH="$HOME/.elixir-install/installs/elixir/$ELIXIR_VERSION-otp-$OTP_MAJOR_VERSION/bin"
-        export PATH="$OTP_PATH:$PATH"
-        export PATH="$ELIXIR_PATH:$PATH"
-        "$ELIXIR_PATH/elixir" --version
-        "$ELIXIR_PATH/mix" --version
-
-  configure-path:
-    desc: "Configure PATH for Elixir and OTP"
-    cmds:
-      - |
-        BASHRC="$HOME/.bashrc"
-        OTP_PATH="$HOME/.elixir-install/installs/otp/$OTP_VERSION/bin"
-        ELIXIR_PATH="$HOME/.elixir-install/installs/elixir/$ELIXIR_VERSION-otp-$OTP_MAJOR_VERSION/bin"
-
-        # Always export for current session
-        export PATH="$OTP_PATH:$PATH"
-        export PATH="$ELIXIR_PATH:$PATH"
-
-        # Check if paths need to be added to .bashrc
-        if ! grep -q "$OTP_PATH" "$BASHRC" || ! grep -q "$ELIXIR_PATH" "$BASHRC"; then
-          echo "Adding Elixir and OTP paths to $BASHRC"
-          echo "" >> "$BASHRC"
-          echo "# Elixir and OTP paths" >> "$BASHRC"
-          echo "export PATH=$OTP_PATH:\$PATH" >> "$BASHRC"
-          echo "export PATH=$ELIXIR_PATH:\$PATH" >> "$BASHRC"
-          echo "Paths added to $BASHRC"
-        else
-          echo "Paths already configured in $BASHRC"
-        fi
-
-  test:
-    desc: "Test mix installation"
     deps:
       - install
+
+  install:
+    desc: Install Erlang and elixir-update
+    run: once
+    status:
+      - command -v elixir
+      - command -v erl
     cmds:
-      - mix --version
-      - elixir --version
+      - defer: rm -f install.sh
       - |
-        # Create a test project
-        mix new test_project
-        cd test_project
-        
-        # Test compilation
-        mix compile
-        
-        # Clean up
-        cd ..
-        rm -rf test_project
+        {{.COMMAND_PREFIX}} apt-get update
+      - |
+        {{.COMMAND_PREFIX}} apt-get install -y jq
+      - curl -fsSLo install.sh https://raw.githubusercontent.com/elixir-lang/elixir-lang.github.com/main/install.sh
+      - chmod +x install.sh
+      # Run install and capture output
+      - |
+        INSTALL_OUTPUT=$(./install.sh elixir@latest otp@latest)
+        OTP_VERSION=$(echo "$INSTALL_OUTPUT" | grep -o "otp/[0-9.]*" | head -1 | cut -d'/' -f2)
+        ELIXIR_VERSION=$(echo "$INSTALL_OUTPUT" | grep -o "elixir/[0-9.].*-otp-[0-9]*" | head -1 | cut -d'/' -f2)
+
+        # Copy Erlang installation
+        {{.COMMAND_PREFIX}} mkdir -p /usr/local/lib/erlang
+        {{.COMMAND_PREFIX}} cp -r {{.HOME}}/.elixir-install/installs/otp/${OTP_VERSION}/* /usr/local/lib/erlang/
+        {{.COMMAND_PREFIX}} ln -sf /usr/local/lib/erlang/bin/erl /usr/local/bin/erl
+        {{.COMMAND_PREFIX}} ln -sf /usr/local/lib/erlang/bin/erlc /usr/local/bin/erlc
+
+        # Copy Elixir installation
+        {{.COMMAND_PREFIX}} mkdir -p /usr/local/lib/elixir
+        {{.COMMAND_PREFIX}} cp -r {{.HOME}}/.elixir-install/installs/elixir/${ELIXIR_VERSION}/* /usr/local/lib/elixir/
+        {{.COMMAND_PREFIX}} ln -sf /usr/local/lib/elixir/bin/elixir /usr/local/bin/elixir
+        {{.COMMAND_PREFIX}} ln -sf /usr/local/lib/elixir/bin/mix /usr/local/bin/mix
+        {{.COMMAND_PREFIX}} ln -sf /usr/local/lib/elixir/bin/iex /usr/local/bin/iex
+      # Verify installations
+      - /usr/local/bin/erl -version
+      - /usr/local/bin/elixir --version

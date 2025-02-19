@@ -5,63 +5,35 @@ version: "3"
 vars:
   HOME:
     sh: echo $HOME
-  INSTALL_DIR: "{{.HOME}}/.fnm"
-  TMP_DIR: /tmp/fnm-install
-  SHELL_RC: "{{.HOME}}/.bashrc"
+  COMMAND_PREFIX:
+    sh: if [ "$(id -u)" != "0" ]; then echo "sudo"; fi
 
 tasks:
   default:
     deps:
       - task: install
 
-  download:
-    internal: true
-    cmds:
-      - mkdir -p {{.TMP_DIR}}
-      - curl -fsSL https://fnm.vercel.app/install -o {{.TMP_DIR}}/install.sh
-
-  verify:
-    internal: true
-    deps:
-      - task: download
-    cmds:
-      - test -f {{.TMP_DIR}}/install.sh
-
-  setup:curl:
-    internal: true
-    status:
-      - command -v curl >/dev/null 2>&1
-    cmds:
-      - sudo apt update
-      - sudo apt install --no-install-recommends -y curl
-
-  setup:unzip:
-    internal: true
-    status:
-      - command -v unzip >/dev/null 2>&1
-    cmds:
-      - sudo apt update
-      - sudo apt install --no-install-recommends -y unzip
-
-  setup:shell:
-    internal: true
-    status:
-      - grep -q "fnm env" "{{.SHELL_RC}}"
-    cmds:
-      - echo 'export PATH="{{.INSTALL_DIR}}:$PATH"' >> "{{.SHELL_RC}}"
-      - echo 'eval "$(fnm env --use-on-cd)"' >> "{{.SHELL_RC}}"
-      - source "{{.SHELL_RC}}"
-
   install:
     desc: "Install fnm"
-    summary: Install fnm Node.js version manager using secure installation
-    deps:
-      - setup:curl
-      - setup:unzip
-      - verify
+    run: once
+    vars:
+      INSTALL_DIR: "{{.HOME}}/.fnm"
     status:
-      - command -v fnm >/dev/null 2>&1
+      - command -v fnm
     cmds:
-      - defer: rm -rf {{.TMP_DIR}}
-      - bash {{.TMP_DIR}}/install.sh --install-dir "{{.INSTALL_DIR}}" --skip-shell
-      - task: setup:shell
+      - defer: rm -f install.sh
+      # Install dependencies
+      - |
+        {{.COMMAND_PREFIX}} apt-get update
+        {{.COMMAND_PREFIX}} apt-get install -y curl unzip
+      # Download and install
+      - curl -fsSLo install.sh https://fnm.vercel.app/install
+      - bash install.sh --install-dir "{{.INSTALL_DIR}}" --skip-shell
+      # Configure shell
+      - |
+        if ! grep -q 'eval "$(fnm env --use-on-cd)"' "{{.HOME}}/.bashrc"; then
+          echo 'export PATH="{{.INSTALL_DIR}}:$PATH"' >> "{{.HOME}}/.bashrc"
+          echo 'eval "$(fnm env --use-on-cd)"' >> "{{.HOME}}/.bashrc"
+        fi
+      # Verify installation
+      - source "{{.HOME}}/.bashrc" && fnm --version

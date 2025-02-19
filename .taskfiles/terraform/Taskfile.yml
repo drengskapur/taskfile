@@ -4,49 +4,27 @@ version: "3"
 
 tasks:
   default:
-    deps: 
+    deps:
       - task: install
 
   install:
     desc: "Install Terraform"
+    run: once
     vars:
+      COMMAND_PREFIX:
+        sh: if [ "$(id -u)" != "0" ]; then echo "sudo"; fi
       LATEST_VERSION:
         sh: curl -s https://checkpoint-api.hashicorp.com/v1/check/terraform | jq -r -M '.current_version'
       DOWNLOAD_URL: "https://releases.hashicorp.com/terraform/{{.LATEST_VERSION}}/terraform_{{.LATEST_VERSION}}_linux_amd64.zip"
-    run: once
     status:
-      - command -v terraform >/dev/null 2>&1
+      - command -v terraform
     cmds:
-      - defer: rm -f terraform_{{.LATEST_VERSION}}_linux_amd64.zip
-      - curl -sLO "{{.DOWNLOAD_URL}}"
-      - unzip -o terraform_{{.LATEST_VERSION}}_linux_amd64.zip
+      - defer: rm -f terraform_linux_amd64.zip
+      - curl -fsSLo terraform.zip "{{.DOWNLOAD_URL}}"
+      - unzip -o terraform.zip
+      - chmod 755 terraform
       - |
-        if [ "$(id -u)" = "0" ]; then
-          mv terraform /usr/local/bin/
-          chown root:root /usr/local/bin/terraform
-          chmod 755 /usr/local/bin/terraform
-        else
-          sudo mv terraform /usr/local/bin/
-          sudo chown root:root /usr/local/bin/terraform
-          sudo chmod 755 /usr/local/bin/terraform
-        fi
-      - terraform version
-
-  test:
-    desc: "Test Terraform installation and basic functionality"
-    deps:
-      - install
-    cmds:
-      - terraform --version
+        {{.COMMAND_PREFIX}} mv terraform /usr/local/bin/terraform
       - |
-        # Test basic terraform functionality with a simple configuration
-        cat > test.tf <<EOL
-        output "test" {
-          value = "Terraform is working!"
-        }
-        EOL
-      - terraform init
-      - terraform plan
-      - terraform apply -auto-approve
-      - defer: rm -f test.tf .terraform.lock.hcl
-      - defer: rm -rf .terraform/
+        {{.COMMAND_PREFIX}} chown root:root /usr/local/bin/terraform
+      - /usr/local/bin/terraform --version

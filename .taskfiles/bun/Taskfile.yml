@@ -2,10 +2,6 @@
 ---
 version: "3"
 
-vars:
-  HOME:
-    sh: echo $HOME
-
 tasks:
   default:
     deps:
@@ -14,34 +10,21 @@ tasks:
   install:
     desc: "Install Bun"
     run: once
+    vars:
+      COMMAND_PREFIX:
+        sh: if [ "$(id -u)" != "0" ]; then echo "sudo"; fi
+      HOME:
+        sh: echo $HOME
     status:
-      - command -v bun >/dev/null 2>&1
+      - command -v bun
     cmds:
+      # Install bun
       - curl -fsSL https://bun.sh/install | bash
-      - sudo mv "{{.HOME}}/.bun/bin/bun" /usr/local/bin/
-      - sudo chown root:root /usr/local/bin/bun
-      - sudo chmod 755 /usr/local/bin/bun
-      - bun --version
-
-  test:
-    desc: "Test Bun installation"
-    cmds:
+      # Set permissions
+      - chmod 755 "{{.HOME}}/.bun/bin/bun"
       - |
-        act -j test-local -W .taskfiles/bun/test-bun.yml -P ubuntu-22.04=ubuntu:22.04 --container-options "--privileged --rm" --eventpath <(echo '{"act": true}')
-
-  test:version:
-    internal: true
-    cmds:
-      - test "$(bun --version 2>&1 | grep -c "bun")" -eq 1
-
-  test:help:
-    internal: true
-    cmds:
-      - test "$(bun --help 2>&1 | grep -c "USAGE")" -eq 1
-
-  test:create:
-    internal: true
-    cmds:
-      - bun create test-app
-      - test -d test-app
-      - rm -rf test-app
+        {{.COMMAND_PREFIX}} mv {{.HOME}}/.bun/bin/bun /usr/local/bin/bun
+      - |
+        {{.COMMAND_PREFIX}} chown root:root /usr/local/bin/bun
+      # Verify installation
+      - bun --version

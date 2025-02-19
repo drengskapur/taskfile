@@ -7,62 +7,46 @@ silent: true
 vars:
   HOME:
     sh: echo $HOME
+  COMMAND_PREFIX:
+    sh: if [ "$(id -u)" != "0" ]; then echo "sudo"; else echo ""; fi
 
 tasks:
   default:
-    deps: 
+    deps:
       - install
 
-  help:
-    desc: "Show information about K3s"
-    cmds:
-      - echo "{{.USAGE}}"
-
   install:
-    desc: "Install K3s"
-    summary: >
-      Install K3s server with default configuration
+    desc: Install K3s
     run: once
     status:
-      - command -v k3s >/dev/null 2>&1
+      - command -v k3s
     cmds:
-      - curl -sfL https://get.k3s.io | sh -
+      - curl -sfL https://get.k3s.io | {{.COMMAND_PREFIX}} sh -
       - |
-        if [ "$(id -u)" != "0" ]; then
-          sudo chmod 644 /etc/rancher/k3s/k3s.yaml
-          mkdir -p {{.HOME}}/.kube
-          sudo cp /etc/rancher/k3s/k3s.yaml {{.HOME}}/.kube/config
-          sudo chown $(id -u):$(id -g) {{.HOME}}/.kube/config
-        else
-          chmod 644 /etc/rancher/k3s/k3s.yaml
-          mkdir -p {{.HOME}}/.kube
-          cp /etc/rancher/k3s/k3s.yaml {{.HOME}}/.kube/config
-          chown 0:0 {{.HOME}}/.kube/config
-        fi
+        {{.COMMAND_PREFIX}} chmod 644 /etc/rancher/k3s/k3s.yaml
+      - |
+        mkdir -p {{.HOME}}/.kube
+      - |
+        {{.COMMAND_PREFIX}} cp /etc/rancher/k3s/k3s.yaml {{.HOME}}/.kube/config
+      - |
+        {{.COMMAND_PREFIX}} chown $(id -u):$(id -g) {{.HOME}}/.kube/config
       - chmod 600 {{.HOME}}/.kube/config
       - echo 'export KUBECONFIG={{.HOME}}/.kube/config' >> {{.HOME}}/.bashrc
-      - echo "Installation complete! Run 'source ~/.bashrc' to use kubectl"
-
-  test:
-    desc: "Test k3s installation"
-    cmds:
-      - |
-        act -j test-local -W .taskfiles/k3s/test-k3s.yml -P ubuntu-22.04=ubuntu:22.04 --container-options "--privileged --rm" --eventpath <(echo '{"act": true}')
 
   start:
     desc: "Start K3s service"
     cmds:
-      - sudo systemctl start k3s
+      - "{{.COMMAND_PREFIX}} systemctl start k3s"
 
   stop:
     desc: "Stop K3s service"
     cmds:
-      - sudo systemctl stop k3s
+      - "{{.COMMAND_PREFIX}} systemctl stop k3s"
 
   status:
     desc: "Check K3s service status"
     cmds:
-      - sudo systemctl status k3s
+      - "{{.COMMAND_PREFIX}} systemctl status k3s"
 
   uninstall:
     desc: "Uninstall K3s"
@@ -74,9 +58,9 @@ tasks:
     desc: "Get node token"
     summary: Display node token for joining agents
     cmds:
-      - sudo cat /var/lib/rancher/k3s/server/node-token
+      - "{{.COMMAND_PREFIX}} cat /var/lib/rancher/k3s/server/node-token"
 
   logs:
     desc: "View K3s logs"
     cmds:
-      - sudo journalctl -u k3s {{.CLI_ARGS}}
+      - "{{.COMMAND_PREFIX}} journalctl -u k3s {{.CLI_ARGS}}"

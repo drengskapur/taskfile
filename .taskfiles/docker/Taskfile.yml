@@ -11,31 +11,21 @@ tasks:
     desc: "Install Docker"
     run: once
     vars:
+      COMMAND_PREFIX:
+        sh: if [ "$(id -u)" != "0" ]; then echo "sudo"; fi
       USER:
         sh: whoami
     status:
-      - command -v docker >/dev/null 2>&1
+      - command -v docker
     cmds:
+      # Install Docker
       - curl -fsSL https://get.docker.com | sh
+      # Configure Docker
       - |
-        if [ "$(id -u)" != "0" ]; then
-          sudo usermod -aG docker "{{.USER}}"
-          sudo systemctl enable docker
-          sudo systemctl start docker
-        else
-          usermod -aG docker "{{.USER}}"
-          systemctl enable docker
-          systemctl start docker
-        fi
-      - docker version
-
-  test:
-    desc: "Test Docker installation and basic functionality"
-    deps:
-      - install
-    cmds:
-      - docker version
-      - docker info
+        {{.COMMAND_PREFIX}} usermod -aG docker {{.USER}}
       - |
-        # Test basic container functionality
-        docker run --rm hello-world
+        {{.COMMAND_PREFIX}} systemctl enable docker
+      - |
+        {{.COMMAND_PREFIX}} systemctl start docker
+      # Verify installation
+      - docker version

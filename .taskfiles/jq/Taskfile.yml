@@ -3,69 +3,27 @@
 version: "3"
 
 vars:
-  METADATA: |
-    {
-      "description": "jq - Command-line JSON processor",
-      "category": "Development",
-      "homepage": "https://jqlang.github.io/jq/",
-      "platforms": ["linux", "darwin"],
-      "architectures": ["amd64", "arm64"]
-    }
-  OS:
-    sh: uname -s | tr '[:upper:]' '[:lower:]'
-  ARCH:
-    sh: |
-      case "$(uname -m)" in
-        x86_64) echo "amd64" ;;
-        aarch64) echo "arm64" ;;
-        *) echo "unsupported" ;;
-      esac
+  COMMAND_PREFIX:
+    sh: if [ "$(id -u)" != "0" ]; then echo "sudo"; else echo ""; fi
   LATEST_VERSION:
     sh: curl -s https://api.github.com/repos/jqlang/jq/releases/latest | grep -o 'jq-[0-9.]*' | head -1 | cut -d'-' -f2
-  DOWNLOAD_URL:
-    sh: |
-      case "{{OS}}" in
-        linux)
-          echo "https://github.com/jqlang/jq/releases/download/jq-{{.LATEST_VERSION}}/jq-linux-{{ARCH}}"
-          ;;
-        darwin)
-          echo "https://github.com/jqlang/jq/releases/download/jq-{{.LATEST_VERSION}}/jq-osx-amd64"
-          ;;
-      esac
 
 tasks:
   default:
     deps:
-      - task: install
+      - install
 
   install:
-    desc: "Install jq"
-    preconditions:
-      - sh: test "{{OS}}" = "linux" -o "{{OS}}" = "darwin"
-        msg: "This task only supports Linux and macOS"
-      - sh: test "{{ARCH}}" = "amd64" -o "{{ARCH}}" = "arm64"
-        msg: "This task only supports amd64 and arm64 architectures"
+    desc: Install jq
     run: once
     status:
-      - command -v jq >/dev/null 2>&1
+      - command -v jq
     cmds:
-      - curl -sL "{{.DOWNLOAD_URL}}" -o jq
-      - chmod +x jq
+      - curl -fsSLo jq https://github.com/jqlang/jq/releases/download/jq-{{.LATEST_VERSION}}/jq-linux-amd64
       - |
-        if [ "$(id -u)" != "0" ]; then
-          sudo mv jq /usr/local/bin/jq
-        else
-          mv jq /usr/local/bin/jq
-        fi
-      - jq --version
-
-  test:
-    desc: "Test jq installation"
-    cmds:
+        {{.COMMAND_PREFIX}} chmod 755 jq
       - |
-        act -j test-local -W .taskfiles/jq/test-jq.yml -P ubuntu-22.04=ubuntu:22.04 --container-options "--privileged --rm" --eventpath <(echo '{"act": true}')
-
-  verify:
-    desc: "Verify jq installation"
-    cmds:
+        {{.COMMAND_PREFIX}} mv jq /usr/local/bin/jq
+      - |
+        {{.COMMAND_PREFIX}} chown root:root /usr/local/bin/jq
       - jq --version

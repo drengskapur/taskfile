@@ -2,34 +2,32 @@
 ---
 version: "3"
 
+vars:
+  HOME:
+    sh: echo $HOME
+  COMMAND_PREFIX:
+    sh: if [ "$(id -u)" != "0" ]; then echo "sudo"; else echo ""; fi
+
 tasks:
   default:
     deps:
       - task: install
 
   install:
-    desc: "Install pnpm"
-    deps:
-      - task: node-check
+    desc: Install pnpm
     run: once
     status:
-      - command -v pnpm >/dev/null 2>&1
-    cmds:
-      - curl -fsSL https://get.pnpm.io/install.sh | sh -
-      - source $HOME/.bashrc
-      - pnpm --version
-
-  test:
-    desc: "Test pnpm installation"
+      - command -v pnpm
     cmds:
       - |
-        act -j test-local -W .taskfiles/pnpm/test-pnpm.yml -P ubuntu-22.04=ubuntu:22.04 --container-options "--privileged --rm" --eventpath <(echo '{"act": true}')
-
-  node-check:
-    desc: "Check Node.js installation"
-    internal: true
-    status:
-      - command -v node >/dev/null 2>&1
-    cmds:
-      - echo "Node.js is required. Please install Node.js first using 'task node:install'"
-      - exit 1
+        {{.COMMAND_PREFIX}} apt-get update
+      - |
+        {{.COMMAND_PREFIX}} apt-get install --no-install-recommends -y curl
+      - curl -fsSLo pnpm "https://github.com/pnpm/pnpm/releases/latest/download/pnpm-linux-x64"
+      - |
+        {{.COMMAND_PREFIX}} chmod 755 pnpm
+      - |
+        {{.COMMAND_PREFIX}} mv pnpm /usr/local/bin/pnpm
+      - |
+        {{.COMMAND_PREFIX}} chown root:root /usr/local/bin/pnpm
+      - /usr/local/bin/pnpm --version

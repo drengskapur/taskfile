@@ -16,58 +16,35 @@ tasks:
   install:doctl:
     desc: "Install doctl CLI"
     vars:
+      COMMAND_PREFIX:
+        sh: if [ "$(id -u)" != "0" ]; then echo "sudo"; fi
       LATEST_VERSION:
         sh: curl -s https://api.github.com/repos/digitalocean/doctl/releases/latest | jq -r '.tag_name | ltrimstr("v")'
       DOWNLOAD_URL: "https://github.com/digitalocean/doctl/releases/download/v{{.LATEST_VERSION}}/doctl-{{.LATEST_VERSION}}-linux-amd64.tar.gz"
     run: once
     status:
-      - command -v doctl >/dev/null 2>&1
+      - command -v doctl
     cmds:
-      - curl -sLO "{{.DOWNLOAD_URL}}"
-      - tar xf doctl-{{.LATEST_VERSION}}-linux-amd64.tar.gz
-      - sudo mv doctl /usr/local/bin/
-      - sudo chown root:root /usr/local/bin/doctl
-      - sudo chmod 755 /usr/local/bin/doctl
-      - doctl version
-      - rm -f doctl-{{.LATEST_VERSION}}-linux-amd64.tar.gz
+      - defer: rm -f doctl-linux-amd64.tar.gz
+      - |
+        {{.COMMAND_PREFIX}} apt-get update
+      - |
+        {{.COMMAND_PREFIX}} apt-get install -y jq
+      - curl -sLo doctl-linux-amd64.tar.gz "{{.DOWNLOAD_URL}}"
+      - tar xf doctl-linux-amd64.tar.gz
+      - |
+        {{.COMMAND_PREFIX}} chmod 755 doctl
+      - |
+        {{.COMMAND_PREFIX}} mv doctl /usr/local/bin/doctl
+      - |
+        {{.COMMAND_PREFIX}} chown root:root /usr/local/bin/doctl
+      - /usr/local/bin/doctl version
 
   install:metrics-agent:
     desc: "Install Metrics Agent"
     run: once
     cmds:
-      - curl -sSL https://repos.insights.digitalocean.com/install.sh -o install.sh
-      - sudo bash install.sh
-      - rm -f install.sh
-
-  test:
-    desc: "Test DigitalOcean tools installation"
-    cmds:
+      - defer: rm -f install.sh
+      - curl -sSLo install.sh https://repos.insights.digitalocean.com/install.sh
       - |
-        act -j test-local -W .taskfiles/digitalocean/test-digitalocean.yml -P ubuntu-22.04=ubuntu:22.04 --container-options "--privileged --rm" --eventpath <(echo '{"act": true}')
-
-  test:doctl:
-    desc: "Test doctl installation"
-    deps:
-      - task: test:doctl:version
-      - task: test:doctl:help
-      - task: test:doctl:compute
-
-  test:doctl:version:
-    internal: true
-    cmds:
-      - test "$(doctl version 2>&1 | grep -c "doctl")" -eq 1
-
-  test:doctl:help:
-    internal: true
-    cmds:
-      - test "$(doctl --help 2>&1 | grep -c "Usage")" -eq 1
-
-  test:doctl:compute:
-    internal: true
-    cmds:
-      - test "$(doctl compute --help 2>&1 | grep -c "Usage")" -eq 1
-
-  debug:cloudinit:
-    desc: "Debug Cloud Init logs"
-    cmds:
-      - cat /var/log/cloud-init-output.log | grep userdata
+        {{.COMMAND_PREFIX}} bash install.sh

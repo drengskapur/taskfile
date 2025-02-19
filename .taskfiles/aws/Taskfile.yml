@@ -2,38 +2,6 @@
 ---
 version: "3"
 
-vars:
-  METADATA: |
-    {
-      "description": "AWS CLI and utilities",
-      "category": "Cloud",
-      "homepage": "https://aws.amazon.com/cli/",
-      "platforms": ["linux", "darwin"],
-      "architectures": ["amd64", "arm64"]
-    }
-  OS:
-    sh: uname -s | tr '[:upper:]' '[:lower:]'
-  ARCH:
-    sh: |
-      case "$(uname -m)" in
-        x86_64) echo "amd64" ;;
-        aarch64) echo "arm64" ;;
-        *) echo "unsupported" ;;
-      esac
-  DOWNLOAD_URL:
-    sh: |
-      case "{{OS}}" in
-        linux)
-          case "{{ARCH}}" in
-            amd64) echo "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" ;;
-            arm64) echo "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" ;;
-          esac
-          ;;
-        darwin)
-          echo "https://awscli.amazonaws.com/AWSCLIV2.pkg"
-          ;;
-      esac
-
 tasks:
   default:
     deps:
@@ -41,54 +9,20 @@ tasks:
 
   install:
     desc: "Install AWS CLI"
-    preconditions:
-      - sh: test "{{OS}}" = "linux" -o "{{OS}}" = "darwin"
-        msg: "This task only supports Linux and macOS"
-      - sh: test "{{ARCH}}" = "amd64" -o "{{ARCH}}" = "arm64"
-        msg: "This task only supports amd64 and arm64 architectures"
+    run: once
+    vars:
+      COMMAND_PREFIX:
+        sh: if [ "$(id -u)" != "0" ]; then echo "sudo"; fi
+    status:
+      - command -v aws
     cmds:
-      - task: install_{{OS}}
-      - aws --version
-
-  install_linux:
-    internal: true
-    cmds:
-      - curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-      - unzip -q awscliv2.zip
-      - sudo ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update
-      - rm -rf aws
-      - rm -f awscliv2.zip
-      - aws --version
-
-  install_darwin:
-    internal: true
-    cmds:
-      - curl -sLO "{{.DOWNLOAD_URL}}"
-      - sudo installer -pkg AWSCLIV2.pkg -target /
-      - rm -f AWSCLIV2.pkg
-
-  verify:
-    desc: "Verify AWS CLI installation"
-    preconditions:
-      - sh: test "{{OS}}" = "linux" -o "{{OS}}" = "darwin"
-        msg: "This task only supports Linux and macOS"
-      - sh: test "{{ARCH}}" = "amd64" -o "{{ARCH}}" = "arm64"
-        msg: "This task only supports amd64 and arm64 architectures"
-    cmds:
-      - aws --version
-
-  test:
-    desc: "Test AWS CLI installation"
-    cmds:
+      - defer: rm -rf aws awscliv2.zip
       - |
-        act -j test-local -W .taskfiles/aws/test-aws.yml -P ubuntu-22.04=ubuntu:22.04 --container-options "--privileged --rm" --eventpath <(echo '{"act": true}')
-
-  test:version:
-    internal: true
-    cmds:
-      - test "$(aws --version 2>&1 | grep -c "aws-cli")" -eq 1
-
-  test:configure:
-    internal: true
-    cmds:
-      - aws configure list
+        {{.COMMAND_PREFIX}} apt-get update
+      - |
+        {{.COMMAND_PREFIX}} apt-get install -y curl unzip ca-certificates
+      - curl -fksSLo awscliv2.zip https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip
+      - unzip -q awscliv2.zip
+      - |
+        {{.COMMAND_PREFIX}} ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update
+      - /usr/local/bin/aws --version

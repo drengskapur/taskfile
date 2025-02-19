@@ -2,57 +2,25 @@
 ---
 version: "3"
 
+vars:
+  COMMAND_PREFIX:
+    sh: if [ "$(id -u)" != "0" ]; then echo "sudo"; fi
+
 tasks:
   default:
-    deps: 
-      - install
+    deps:
+      - task: install
 
   install:
-    desc: "Install rclone and FUSE"
-    deps: 
-      - fuse-install
+    desc: Install rclone
     run: once
     status:
-      - command -v rclone >/dev/null 2>&1
+      - command -v rclone
     cmds:
       - |
-        if [ "$(id -u)" = "0" ]; then
-          curl https://rclone.org/install.sh | bash
-        else
-          curl https://rclone.org/install.sh | sudo bash
-        fi
+        {{.COMMAND_PREFIX}} apt-get update
+      - |
+        {{.COMMAND_PREFIX}} apt-get install -y fuse
+      - |
+        curl https://rclone.org/install.sh | {{.COMMAND_PREFIX}} bash
       - rclone version
-
-  update:
-    desc: "Update rclone to the latest version"
-    run: once
-    status:
-      - rclone selfupdate | grep -q "rclone version"
-    cmds:
-      - rclone selfupdate
-      - echo "rclone has been updated to the latest version"
-
-  fuse-install:
-    desc: "Install FUSE support"
-    internal: true
-    run: once
-    status:
-      - command -v fusermount >/dev/null 2>&1
-    cmds:
-      - |
-        if [ "$(id -u)" = "0" ]; then
-          apt update
-          apt install -y fuse
-        else
-          sudo apt update
-          sudo apt install -y fuse
-        fi
-
-  test:
-    desc: "Test rclone installation and basic functionality"
-    deps:
-      - install
-    cmds:
-      - rclone --version
-      - rclone listremotes
-      - rclone config show

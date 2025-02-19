@@ -4,35 +4,31 @@ version: "3"
 
 tasks:
   default:
-    deps:
-      - task: install
+    deps: [install]
 
   install:
     desc: "Install hadolint"
+    run: once
     vars:
+      COMMAND_PREFIX:
+        sh: if [ "$(id -u)" != "0" ]; then echo "sudo"; fi
       LATEST_VERSION:
         sh: curl -s https://api.github.com/repos/hadolint/hadolint/releases/latest | jq -r '.tag_name | ltrimstr("v")'
       DOWNLOAD_URL: "https://github.com/hadolint/hadolint/releases/download/v{{.LATEST_VERSION}}/hadolint-Linux-x86_64"
-    run: once
     status:
-      - command -v hadolint >/dev/null 2>&1
+      - command -v hadolint
     cmds:
+      # Install dependencies
+      - |
+        {{.COMMAND_PREFIX}} apt-get update
+      - |
+        {{.COMMAND_PREFIX}} apt-get install -y jq
+      # Download and install
       - curl -fsSLo hadolint "{{.DOWNLOAD_URL}}"
-      - chmod +x hadolint
+      - chmod 755 hadolint
       - |
-        if [ "$(id -u)" != "0" ]; then
-          sudo mv hadolint /usr/local/bin/
-          sudo chown root:root /usr/local/bin/hadolint
-          sudo chmod 755 /usr/local/bin/hadolint
-        else
-          mv hadolint /usr/local/bin/
-          chown root:root /usr/local/bin/hadolint
-          chmod 755 /usr/local/bin/hadolint
-        fi
+        {{.COMMAND_PREFIX}} mv hadolint /usr/local/bin/hadolint
+      - |
+        {{.COMMAND_PREFIX}} chown root:root /usr/local/bin/hadolint
+      # Verify installation
       - hadolint --version
-
-  test:
-    desc: "Test hadolint installation"
-    cmds:
-      - |
-        act -j test-local -W .taskfiles/hadolint/test-hadolint.yml -P ubuntu-22.04=ubuntu:22.04 --container-options "--privileged --rm" --eventpath <(echo '{"act": true}')

@@ -2,65 +2,59 @@
 ---
 version: "3"
 
+vars:
+  HOME:
+    sh: echo $HOME
+  COMMAND_PREFIX:
+    sh: if [ "$(id -u)" != "0" ]; then echo "sudo"; else echo ""; fi
+  LATEST_VERSION:
+    sh: curl -s https://api.github.com/repos/Schniz/fnm/releases/latest | jq -r '.tag_name'
+
 tasks:
   default:
-    deps: 
-      - task: install
+    deps:
+      - install
 
   install:
-    desc: "Install Node.js"
-    deps: 
-      - task: setup-deps
+    desc: Install Node.js via fnm
     run: once
     status:
-      - command -v node >/dev/null 2>&1
+      - command -v node
     cmds:
-      - task: fnm-install
-      - task: fnm-install-node
-
-  setup-deps:
-    desc: "Install Ubuntu dependencies"
-    internal: true
-    run: once
-    status:
-      - command -v curl unzip >/dev/null 2>&1
-    cmds:
+      - defer: rm -f fnm.zip
       - |
-        if [ "$(id -u)" != "0" ]; then
-          sudo apt update
-          sudo apt install -y curl unzip
-        else
-          apt update
-          apt install -y curl unzip
+        {{.COMMAND_PREFIX}} apt-get update
+      - |
+        {{.COMMAND_PREFIX}} apt-get install --no-install-recommends -y jq curl unzip
+      # Download and install fnm
+      - curl -fsSLo fnm.zip "https://github.com/Schniz/fnm/releases/download/{{.LATEST_VERSION}}/fnm-linux.zip"
+      - unzip -o fnm.zip fnm
+      - |
+        {{.COMMAND_PREFIX}} chmod 755 fnm
+      - |
+        {{.COMMAND_PREFIX}} mv fnm /usr/local/bin/fnm
+      - |
+        {{.COMMAND_PREFIX}} chown root:root /usr/local/bin/fnm
+      # Install latest Node.js LTS
+      - |
+        /usr/local/bin/fnm install --lts
+      - |
+        /usr/local/bin/fnm default lts-latest
+      # Configure bash initialization
+      - |
+        if ! grep -q "fnm env" "{{.HOME}}/.bashrc"; then
+          echo 'eval "$(fnm env --use-on-cd)"' >> "{{.HOME}}/.bashrc"
         fi
-
-  fnm-install:
-    desc: "Install fnm"
-    internal: true
-    run: once
-    status:
-      - command -v fnm >/dev/null 2>&1
-    cmds:
-      - curl -fsSL https://fnm.vercel.app/install | bash
-      - echo 'eval "$(fnm env --use-on-cd)"' >> $HOME/.bashrc
-
-  fnm-install-node:
-    desc: "Install latest LTS Node.js"
-    internal: true
-    run: once
-    cmds:
-      - source $HOME/.bashrc
-      - fnm install --lts
-      - fnm default lts-latest
-      - fnm use lts-latest
-
-  test:
-    desc: "Test node installation"
-    cmds:
+      # Generate bash completions
       - |
-        act -j test-local -W .taskfiles/node/test-node.yml -P ubuntu-22.04=ubuntu:22.04 --container-options "--privileged --rm" --eventpath <(echo '{"act": true}')
-
-  init:
-    desc: "Initialize a new Node.js project"
-    cmds:
-      - npm init -y
+        {{.COMMAND_PREFIX}} mkdir -p /etc/bash_completion.d
+      - fnm completions --shell bash | {{.COMMAND_PREFIX}} tee /etc/bash_completion.d/fnm >/dev/null
+      # Setup environment
+      - |
+        eval "$(/usr/local/bin/fnm env)"
+      - |
+        NODE_PATH=$(readlink -f $(which node))
+        $NODE_PATH --version
+      - |
+        NPM_PATH=$(readlink -f $(which npm))
+        $NPM_PATH --version

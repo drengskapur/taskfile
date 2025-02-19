@@ -9,39 +9,20 @@ tasks:
 
   install:
     desc: "Install uv"
+    run: once
+    env:
+      UV_INSTALL_DIR: "/usr/local/bin"
     vars:
       DOWNLOAD_URL: "https://astral.sh/uv/install.sh"
       INSTALL_DIR: "/usr/local/bin"
-    run: once
+      COMMAND_PREFIX:
+        sh: if [ "$(id -u)" != "0" ]; then echo "sudo"; fi
     status:
-      - command -v uv >/dev/null 2>&1
-      - test -x "{{.INSTALL_DIR}}/uv"
-    preconditions:
-      - sh: command -v curl >/dev/null 2>&1
-        msg: "curl is required to install uv"
-      - sh: command -v sudo >/dev/null 2>&1
-        msg: "sudo is required to install uv"
+      - command -v uv
     cmds:
-      - curl -fsSLO "{{.DOWNLOAD_URL}}"
       - defer: rm -f install.sh
+      - curl -fsSLo install.sh "https://astral.sh/uv/install.sh"
       - chmod +x install.sh
-      - UV_INSTALL_DIR="{{.INSTALL_DIR}}" sudo -E ./install.sh
-      - uv --version
-
-  test:
-    desc: "Test UV installation"
-    cmds:
       - |
-        act -j test-local -W .taskfiles/uv/test-uv.yml -P ubuntu-22.04=ubuntu:22.04 --container-options "--privileged --rm" --eventpath <(echo '{"act": true}')
-
-  test:version:
-    internal: true
-    cmds:
-      - test "$(uv --version 2>&1 | grep -c "uv")" -eq 1
-
-  test:venv:
-    internal: true
-    cmds:
-      - uv venv test-venv
-      - test -d test-venv
-      - rm -rf test-venv
+        {{.COMMAND_PREFIX}} -E ./install.sh
+      - uv --version

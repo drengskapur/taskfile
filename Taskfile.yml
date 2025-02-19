@@ -21,7 +21,6 @@ includes:
   mix: .taskfiles/mix
   node: .taskfiles/node
   pnpm: .taskfiles/pnpm
-  python3: .taskfiles/python3
   rclone: .taskfiles/rclone
   terraform: .taskfiles/terraform
   uv: .taskfiles/uv
