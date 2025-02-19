@@ -13,24 +13,26 @@ This repository provides a set of modular taskfiles that can be easily integrate
 
 ## Available Tools
 
-- `act` - Local GitHub Actions runner
-- `aws` - AWS CLI and utilities
-- `bun` - JavaScript runtime and package manager
-- `digitalocean` - DigitalOcean CLI and tools
-- `direnv` - Directory-specific environment variables
-- `docker` - Container runtime and management
-- `fnm` - Fast Node.js version manager
-- `go` - Go language toolchain
-- `hadolint` - Dockerfile linting
-- `helm` - Kubernetes package manager
-- `jq` - JSON processing utilities
-- `k3s` - Lightweight Kubernetes distribution
-- `mix` - Elixir build tool and package manager
-- `node` - Node.js runtime and npm
-- `pnpm` - Fast npm package manager
-- `rclone` - Cloud storage sync tool
-- `terraform` - Infrastructure as Code
-- `uv` - Fast Python package installer
+| Tool | Description | Primary Use |
+|------|-------------|-------------|
+| `act` | Local GitHub Actions runner | CI/CD Testing |
+| `aws` | AWS CLI and utilities | Cloud Infrastructure |
+| `bun` | JavaScript runtime and package manager | Web Development |
+| `digitalocean` | DigitalOcean CLI and tools | Cloud Infrastructure |
+| `direnv` | Directory-specific environment variables | Development Environment |
+| `docker` | Container runtime and management | Containerization |
+| `fnm` | Fast Node.js version manager | JavaScript Development |
+| `go` | Go language toolchain | Backend Development |
+| `hadolint` | Dockerfile linting | Container Development |
+| `helm` | Kubernetes package manager | Container Orchestration |
+| `jq` | JSON processing utilities | Data Processing |
+| `k3s` | Lightweight Kubernetes distribution | Container Orchestration |
+| `mix` | Elixir build tool and package manager | Backend Development |
+| `node` | Node.js runtime and npm | JavaScript Development |
+| `pnpm` | Fast npm package manager | JavaScript Development |
+| `rclone` | Cloud storage sync tool | Data Management |
+| `terraform` | Infrastructure as Code | Cloud Infrastructure |
+| `uv` | Fast Python package installer | Python Development |
 
 ## Quick Start
 
@@ -73,13 +75,3 @@ task docker:install
 # Install Go with specific version
 task go:install GO_VERSION=1.21.1
 ```
-
-## Notes
-
-- Some installations may require root/sudo access
-- Each taskfile is independently versioned
-- All taskfiles are tested against supported platforms
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
