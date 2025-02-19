@@ -11,6 +11,12 @@ tasks:
     deps:
       - task: install
 
+  setup:
+    desc: "Install and configure act"
+    deps:
+      - task: install
+      - task: setup:config
+
   install:
     desc: "Install act"
     vars:
