@@ -4,5 +4,6 @@
 .task
 .turbo
 debug
+logs
 node_modules
 test_logs
