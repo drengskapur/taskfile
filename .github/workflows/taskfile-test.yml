@@ -1,0 +1,49 @@
+name: Taskfile Test
+
+on:
+  push:
+    paths:
+      - '.taskfiles/**'
+      - '.github/workflows/taskfile-test.yml'
+  pull_request:
+    paths:
+      - '.taskfiles/**'
+      - '.github/workflows/taskfile-test.yml'
+  workflow_dispatch:
+    inputs:
+      taskfile_dir:
+        description: 'Directory containing the Taskfile (relative to .taskfiles/)'
+        required: true
+        type: string
+
+jobs:
+  test-taskfile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Task
+        run: |
+          curl -sL https://taskfile.dev/install.sh | sh
+          sudo mv ./bin/task /usr/local/bin/
+          task --version
+
+      - name: Test Taskfile
+        working-directory: .taskfiles/${{ github.event.inputs.taskfile_dir }}
+        run: |
+          echo "Testing taskfile in $(pwd)"
+          echo "Available tasks:"
+          task -l
+          
+          # Get all task names (strip the colon and description)
+          TASKS=$(task -l | grep '^* ' | sed 's/^* \([^:]*\):.*/\1/')
+          
+          # Run each task
+          echo "Found tasks: $TASKS"
+          for TASK in $TASKS; do
+            echo "Running task: $TASK"
+            if ! task "$TASK"; then
+              echo "Task $TASK failed"
+              exit 1
+            fi
+          done

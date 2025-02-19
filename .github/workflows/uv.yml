@@ -1,0 +1,29 @@
+name: UV Taskfile Test
+
+on:
+  push:
+    paths:
+      - '.taskfiles/uv/**'
+      - '.github/workflows/uv.yml'
+  pull_request:
+    paths:
+      - '.taskfiles/uv/**'
+      - '.github/workflows/uv.yml'
+
+jobs:
+  test-uv-taskfile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Task
+        run: |
+          curl -sL https://taskfile.dev/install.sh | sh
+          sudo mv ./bin/task /usr/local/bin/
+          task --version
+
+      - name: Test UV Installation
+        run: |
+          cd .taskfiles/uv
+          task install
+          uv --version
