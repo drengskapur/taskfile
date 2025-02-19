@@ -2,12 +2,15 @@ name: Test Taskfiles
 
 on:
   push:
-    branches: [ main ]
+    paths:
+      - '.taskfiles/**'
+      - '.github/workflows/test.yml'
   pull_request:
-    branches: [ main ]
+    paths:
+      - '.taskfiles/**'
+      - '.github/workflows/test.yml'
 
 jobs:
-  # Test the main Taskfile first
   test-main:
     runs-on: ubuntu-latest
     env:
@@ -19,8 +22,9 @@ jobs:
 
       - name: Install Task
         run: |
-          chmod +x ./install.sh
-          ./install.sh
+          go-task/task info checking GitHub for latest tag
+          curl -fsSL https://raw.githubusercontent.com/go-task/task/main/install-task.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Check Task version
         run: $TASK_BIN --version
@@ -31,32 +35,13 @@ jobs:
       - name: List available tasks
         run: $TASK_BIN --list
 
-  # Test individual taskfiles in parallel
   test-taskfiles:
     needs: test-main
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        taskfile:
-          - act
-          - aws
-          - bun
-          - digitalocean
-          - direnv
-          - docker
-          - fnm
-          - hadolint
-          - helm
-          - jq
-          - k3s
-          - mix
-          - node
-          - pnpm
-          - python3
-          - rclone
-          - terraform
-          - uv
+        taskfile: ${{ fromJSON(steps.set-matrix.outputs.taskfiles) }}
     env:
       SHELL: /bin/bash
       SHELL_RC: ${{ github.workspace }}/.bashrc
@@ -66,8 +51,9 @@ jobs:
 
       - name: Install Task
         run: |
-          chmod +x ./install.sh
-          ./install.sh
+          go-task/task info checking GitHub for latest tag
+          curl -fsSL https://raw.githubusercontent.com/go-task/task/main/install-task.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Create shell config
         run: touch "$SHELL_RC"
@@ -97,3 +83,14 @@ jobs:
               exit 1
             fi
           done
+
+  set-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      taskfiles: ${{ steps.get-taskfiles.outputs.list }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: get-taskfiles
+        run: |
+          TASKFILES=$(ls -1 .taskfiles | jq -R -s -c 'split("\n")[:-1]')
+          echo "list=$TASKFILES" >> $GITHUB_OUTPUT
