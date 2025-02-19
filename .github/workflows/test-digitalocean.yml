@@ -1,12 +1,12 @@
-name: Test go Installation
+name: Test digitalocean Installation
 
 on:
   push:
     paths:
-      - '.taskfiles/go/**'
+      - '.taskfiles/digitalocean/**'
   pull_request:
     paths:
-      - '.taskfiles/go/**'
+      - '.taskfiles/digitalocean/**'
   workflow_dispatch:
 
 jobs:
@@ -20,8 +20,8 @@ jobs:
       - name: Configure Git
         run: git config --global --add safe.directory /home/user/taskfile
 
-      - name: Install go
-        run: task go:install
+      - name: Install digitalocean
+        run: task digitalocean:install
 
-      - name: Verify go Installation
-        run: task go:verify
+      - name: Verify digitalocean Installation
+        run: task digitalocean:verify

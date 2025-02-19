@@ -1,12 +1,12 @@
-name: Test go Installation
+name: Test helm Installation
 
 on:
   push:
     paths:
-      - '.taskfiles/go/**'
+      - '.taskfiles/helm/**'
   pull_request:
     paths:
-      - '.taskfiles/go/**'
+      - '.taskfiles/helm/**'
   workflow_dispatch:
 
 jobs:
@@ -20,8 +20,8 @@ jobs:
       - name: Configure Git
         run: git config --global --add safe.directory /home/user/taskfile
 
-      - name: Install go
-        run: task go:install
+      - name: Install helm
+        run: task helm:install
 
-      - name: Verify go Installation
-        run: task go:verify
+      - name: Verify helm Installation
+        run: task helm:verify

@@ -1,12 +1,12 @@
-name: Test go Installation
+name: Test act Installation
 
 on:
   push:
     paths:
-      - '.taskfiles/go/**'
+      - '.taskfiles/act/**'
   pull_request:
     paths:
-      - '.taskfiles/go/**'
+      - '.taskfiles/act/**'
   workflow_dispatch:
 
 jobs:
@@ -20,8 +20,8 @@ jobs:
       - name: Configure Git
         run: git config --global --add safe.directory /home/user/taskfile
 
-      - name: Install go
-        run: task go:install
+      - name: Install act
+        run: task act:install
 
-      - name: Verify go Installation
-        run: task go:verify
+      - name: Verify act Installation
+        run: task act:verify

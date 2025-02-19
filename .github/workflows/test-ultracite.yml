@@ -1,12 +1,12 @@
-name: Test go Installation
+name: Test ultracite Installation
 
 on:
   push:
     paths:
-      - '.taskfiles/go/**'
+      - '.taskfiles/ultracite/**'
   pull_request:
     paths:
-      - '.taskfiles/go/**'
+      - '.taskfiles/ultracite/**'
   workflow_dispatch:
 
 jobs:
@@ -20,8 +20,8 @@ jobs:
       - name: Configure Git
         run: git config --global --add safe.directory /home/user/taskfile
 
-      - name: Install go
-        run: task go:install
+      - name: Install ultracite
+        run: task ultracite:install
 
-      - name: Verify go Installation
-        run: task go:verify
+      - name: Verify ultracite Installation
+        run: task ultracite:verify

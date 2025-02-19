@@ -1,12 +1,12 @@
-name: Test go Installation
+name: Test fnm Installation
 
 on:
   push:
     paths:
-      - '.taskfiles/go/**'
+      - '.taskfiles/fnm/**'
   pull_request:
     paths:
-      - '.taskfiles/go/**'
+      - '.taskfiles/fnm/**'
   workflow_dispatch:
 
 jobs:
@@ -20,8 +20,8 @@ jobs:
       - name: Configure Git
         run: git config --global --add safe.directory /home/user/taskfile
 
-      - name: Install go
-        run: task go:install
+      - name: Install fnm
+        run: task fnm:install
 
-      - name: Verify go Installation
-        run: task go:verify
+      - name: Verify fnm Installation
+        run: task fnm:verify

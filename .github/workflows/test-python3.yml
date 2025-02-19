@@ -1,12 +1,12 @@
-name: Test go Installation
+name: Test python3 Installation
 
 on:
   push:
     paths:
-      - '.taskfiles/go/**'
+      - '.taskfiles/python3/**'
   pull_request:
     paths:
-      - '.taskfiles/go/**'
+      - '.taskfiles/python3/**'
   workflow_dispatch:
 
 jobs:
@@ -20,8 +20,8 @@ jobs:
       - name: Configure Git
         run: git config --global --add safe.directory /home/user/taskfile
 
-      - name: Install go
-        run: task go:install
+      - name: Install python3
+        run: task python3:install
 
-      - name: Verify go Installation
-        run: task go:verify
+      - name: Verify python3 Installation
+        run: task python3:verify

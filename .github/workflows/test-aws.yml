@@ -1,12 +1,12 @@
-name: Test go Installation
+name: Test aws Installation
 
 on:
   push:
     paths:
-      - '.taskfiles/go/**'
+      - '.taskfiles/aws/**'
   pull_request:
     paths:
-      - '.taskfiles/go/**'
+      - '.taskfiles/aws/**'
   workflow_dispatch:
 
 jobs:
@@ -20,8 +20,8 @@ jobs:
       - name: Configure Git
         run: git config --global --add safe.directory /home/user/taskfile
 
-      - name: Install go
-        run: task go:install
+      - name: Install aws
+        run: task aws:install
 
-      - name: Verify go Installation
-        run: task go:verify
+      - name: Verify aws Installation
+        run: task aws:verify

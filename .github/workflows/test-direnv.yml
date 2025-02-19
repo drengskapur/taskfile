@@ -1,12 +1,12 @@
-name: Test go Installation
+name: Test direnv Installation
 
 on:
   push:
     paths:
-      - '.taskfiles/go/**'
+      - '.taskfiles/direnv/**'
   pull_request:
     paths:
-      - '.taskfiles/go/**'
+      - '.taskfiles/direnv/**'
   workflow_dispatch:
 
 jobs:
@@ -20,8 +20,8 @@ jobs:
       - name: Configure Git
         run: git config --global --add safe.directory /home/user/taskfile
 
-      - name: Install go
-        run: task go:install
+      - name: Install direnv
+        run: task direnv:install
 
-      - name: Verify go Installation
-        run: task go:verify
+      - name: Verify direnv Installation
+        run: task direnv:verify

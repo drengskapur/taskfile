@@ -1,12 +1,12 @@
-name: Test go Installation
+name: Test pnpm Installation
 
 on:
   push:
     paths:
-      - '.taskfiles/go/**'
+      - '.taskfiles/pnpm/**'
   pull_request:
     paths:
-      - '.taskfiles/go/**'
+      - '.taskfiles/pnpm/**'
   workflow_dispatch:
 
 jobs:
@@ -20,8 +20,8 @@ jobs:
       - name: Configure Git
         run: git config --global --add safe.directory /home/user/taskfile
 
-      - name: Install go
-        run: task go:install
+      - name: Install pnpm
+        run: task pnpm:install
 
-      - name: Verify go Installation
-        run: task go:verify
+      - name: Verify pnpm Installation
+        run: task pnpm:verify

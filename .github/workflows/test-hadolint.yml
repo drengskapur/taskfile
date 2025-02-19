@@ -1,12 +1,12 @@
-name: Test go Installation
+name: Test hadolint Installation
 
 on:
   push:
     paths:
-      - '.taskfiles/go/**'
+      - '.taskfiles/hadolint/**'
   pull_request:
     paths:
-      - '.taskfiles/go/**'
+      - '.taskfiles/hadolint/**'
   workflow_dispatch:
 
 jobs:
@@ -20,8 +20,8 @@ jobs:
       - name: Configure Git
         run: git config --global --add safe.directory /home/user/taskfile
 
-      - name: Install go
-        run: task go:install
+      - name: Install hadolint
+        run: task hadolint:install
 
-      - name: Verify go Installation
-        run: task go:verify
+      - name: Verify hadolint Installation
+        run: task hadolint:verify

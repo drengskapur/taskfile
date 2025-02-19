@@ -1,12 +1,12 @@
-name: Test go Installation
+name: Test docker Installation
 
 on:
   push:
     paths:
-      - '.taskfiles/go/**'
+      - '.taskfiles/docker/**'
   pull_request:
     paths:
-      - '.taskfiles/go/**'
+      - '.taskfiles/docker/**'
   workflow_dispatch:
 
 jobs:
@@ -20,8 +20,8 @@ jobs:
       - name: Configure Git
         run: git config --global --add safe.directory /home/user/taskfile
 
-      - name: Install go
-        run: task go:install
+      - name: Install docker
+        run: task docker:install
 
-      - name: Verify go Installation
-        run: task go:verify
+      - name: Verify docker Installation
+        run: task docker:verify

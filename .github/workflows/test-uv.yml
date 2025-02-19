@@ -1,12 +1,12 @@
-name: Test go Installation
+name: Test uv Installation
 
 on:
   push:
     paths:
-      - '.taskfiles/go/**'
+      - '.taskfiles/uv/**'
   pull_request:
     paths:
-      - '.taskfiles/go/**'
+      - '.taskfiles/uv/**'
   workflow_dispatch:
 
 jobs:
@@ -20,8 +20,8 @@ jobs:
       - name: Configure Git
         run: git config --global --add safe.directory /home/user/taskfile
 
-      - name: Install go
-        run: task go:install
+      - name: Install uv
+        run: task uv:install
 
-      - name: Verify go Installation
-        run: task go:verify
+      - name: Verify uv Installation
+        run: task uv:verify

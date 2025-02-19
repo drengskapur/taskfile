@@ -1,12 +1,12 @@
-name: Test go Installation
+name: Test k3s Installation
 
 on:
   push:
     paths:
-      - '.taskfiles/go/**'
+      - '.taskfiles/k3s/**'
   pull_request:
     paths:
-      - '.taskfiles/go/**'
+      - '.taskfiles/k3s/**'
   workflow_dispatch:
 
 jobs:
@@ -20,8 +20,8 @@ jobs:
       - name: Configure Git
         run: git config --global --add safe.directory /home/user/taskfile
 
-      - name: Install go
-        run: task go:install
+      - name: Install k3s
+        run: task k3s:install
 
-      - name: Verify go Installation
-        run: task go:verify
+      - name: Verify k3s Installation
+        run: task k3s:verify

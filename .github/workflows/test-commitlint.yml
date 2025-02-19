@@ -1,12 +1,12 @@
-name: Test go Installation
+name: Test commitlint Installation
 
 on:
   push:
     paths:
-      - '.taskfiles/go/**'
+      - '.taskfiles/commitlint/**'
   pull_request:
     paths:
-      - '.taskfiles/go/**'
+      - '.taskfiles/commitlint/**'
   workflow_dispatch:
 
 jobs:
@@ -20,8 +20,8 @@ jobs:
       - name: Configure Git
         run: git config --global --add safe.directory /home/user/taskfile
 
-      - name: Install go
-        run: task go:install
+      - name: Install commitlint
+        run: task commitlint:install
 
-      - name: Verify go Installation
-        run: task go:verify
+      - name: Verify commitlint Installation
+        run: task commitlint:verify
