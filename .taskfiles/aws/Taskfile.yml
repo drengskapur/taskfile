@@ -15,10 +15,9 @@ tasks:
     run: once
     status:
       - command -v aws >/dev/null 2>&1
-    defer:
-      - rm -f awscliv2.zip
-      - rm -rf aws
     cmds:
+      - defer: rm -f awscliv2.zip
+      - defer: rm -rf aws
       - curl -sLO "{{.DOWNLOAD_URL}}" -o awscliv2.zip
       - unzip -q awscliv2.zip
       - sudo ./aws/install
