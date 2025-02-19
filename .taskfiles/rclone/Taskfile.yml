@@ -24,13 +24,9 @@ tasks:
       - |
         {{.COMMAND_PREFIX}} apt-get update
       - |
-        {{.COMMAND_PREFIX}} apt-get install --no-install-recommends -y curl
-      # Remove existing rclone if present
+        {{.COMMAND_PREFIX}} apt-get install --no-install-recommends -y curl unzip
+      # Install rclone (exit code 3 means already up to date)
       - |
-        if command -v rclone >/dev/null 2>&1; then
-          {{.COMMAND_PREFIX}} rm -f /usr/bin/rclone
-          {{.COMMAND_PREFIX}} rm -f /usr/local/bin/rclone
-        fi
-      # Install rclone
-      - curl https://rclone.org/install.sh | {{.COMMAND_PREFIX}} bash
+        curl https://rclone.org/install.sh | {{.COMMAND_PREFIX}} bash || [ $? -eq 3 ]
+      # Verify installation
       - /usr/bin/rclone --version
