@@ -37,3 +37,10 @@ tasks:
           echo 'eval "$(direnv hook bash)"' >> "{{.HOME}}/.bashrc"
         fi
       - /usr/local/bin/direnv --version
+
+  init:
+    desc: "Initialize direnv in the current directory"
+    cmds:
+      - echo "dotenv" > .envrc
+      - touch .env
+      - direnv allow
