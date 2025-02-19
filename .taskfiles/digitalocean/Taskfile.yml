@@ -23,13 +23,13 @@ tasks:
     status:
       - command -v doctl >/dev/null 2>&1
     cmds:
-      - defer: rm -f doctl-{{.LATEST_VERSION}}-linux-amd64.tar.gz
       - curl -sLO "{{.DOWNLOAD_URL}}"
       - tar xf doctl-{{.LATEST_VERSION}}-linux-amd64.tar.gz
       - sudo mv doctl /usr/local/bin/
       - sudo chown root:root /usr/local/bin/doctl
       - sudo chmod 755 /usr/local/bin/doctl
       - doctl version
+      - defer: rm -f doctl-{{.LATEST_VERSION}}-linux-amd64.tar.gz
 
   install:metrics-agent:
     desc: "Install Metrics Agent"

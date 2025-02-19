@@ -21,5 +21,4 @@ tasks:
       - chmod +x jq-linux-amd64
       - sudo mv jq-linux-amd64 /usr/local/bin/jq
       - jq --version
-    defer:
       - rm -f jq-linux-amd64
