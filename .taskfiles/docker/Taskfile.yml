@@ -3,16 +3,21 @@
 version: "3"
 
 tasks:
+  default:
+    deps:
+      - task: install
+
   install:
     desc: "Install Docker"
     run: once
-    status:
-      - command -v docker >/dev/null 2>&1
     vars:
       USER:
         sh: whoami
+    status:
+      - command -v docker >/dev/null 2>&1
     cmds:
       - curl -fsSL https://get.docker.com | sh
       - sudo usermod -aG docker "{{.USER}}"
       - sudo systemctl enable docker
       - sudo systemctl start docker
+      - /usr/bin/docker run hello-world
