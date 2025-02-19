@@ -1,0 +1,37 @@
+name: Test Taskfiles
+
+on:
+  workflow_dispatch:
+    inputs:
+      taskfile:
+        description: 'Specific taskfile to test (leave empty to test all)'
+        required: false
+        type: string
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Task
+        uses: arduino/setup-task@v1
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Test specific taskfile
+        if: inputs.taskfile != ''
+        run: |
+          echo "Testing ${{ inputs.taskfile }}..."
+          task ${{ inputs.taskfile }}:install
+
+      - name: Test all taskfiles
+        if: inputs.taskfile == ''
+        run: |
+          for dir in .taskfiles/*; do
+            if [ -f "$dir/Taskfile.yml" ]; then
+              name=$(basename "$dir")
+              echo "Testing $name..."
+              task $name:install || echo "Failed: $name"
+            fi
+          done
