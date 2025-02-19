@@ -3,6 +3,9 @@
 version: "3"
 
 tasks:
+  default:
+    deps: [install]
+
   install:
     desc: "Install uv"
     run: once
