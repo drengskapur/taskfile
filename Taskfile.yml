@@ -27,7 +27,9 @@ includes:
 
 tasks:
   default:
-    cmd: task --list
+    desc: "Show available tasks"
+    cmds:
+      - task --list
 
   noop:
     internal: true
@@ -36,11 +38,11 @@ tasks:
   test:
     desc: "Run tests using act"
     deps:
-      - task: act:install
+      - task: _install:act
     cmds:
       - act push -j test-taskfiles -P ubuntu-latest=ghcr.io/catthehacker/ubuntu:act-latest
 
-  act:install:
+  _install:act:
     desc: "Install act"
     internal: true
     vars:
