@@ -32,3 +32,30 @@ tasks:
   noop:
     internal: true
     cmd: noop() { :; }
+
+  test:
+    desc: "Run tests using act"
+    deps:
+      - task: act:install
+    cmds:
+      - act push -j test-taskfiles -P ubuntu-latest=ghcr.io/catthehacker/ubuntu:act-latest
+
+  act:install:
+    desc: "Install act"
+    internal: true
+    vars:
+      LATEST_VERSION:
+        sh: curl -s https://api.github.com/repos/nektos/act/releases/latest | jq -r '.tag_name | ltrimstr("v")'
+      DOWNLOAD_URL: "https://github.com/nektos/act/releases/download/v{{.LATEST_VERSION}}/act_Linux_x86_64.tar.gz"
+    run: once
+    status:
+      - command -v act >/dev/null 2>&1
+    defer:
+      - rm -f act_Linux_x86_64.tar.gz
+    cmds:
+      - curl -sLO "{{.DOWNLOAD_URL}}"
+      - tar xf act_Linux_x86_64.tar.gz
+      - sudo mv act /usr/local/bin/
+      - sudo chown root:root /usr/local/bin/act
+      - sudo chmod 755 /usr/local/bin/act
+      - act --version
