@@ -1,59 +1,75 @@
 #!/bin/bash
 
-# Function to test a taskfile
-test_taskfile() {
-    local taskfile="$1"
-    echo "Testing $taskfile..."
+# Function to test taskfiles using act
+test_taskfiles() {
+    local fail_fast="$1"
+    local taskfiles="$2"
+    echo "Testing taskfiles using GitHub Actions workflow..."
     
-    # Run the default task which should trigger the install
-    if ! task -t "$taskfile" >/dev/null 2>&1; then
-        echo "❌ Failed to run default task in $taskfile"
-        return 1
+    # Run the test workflow using act
+    if [ "$fail_fast" = "true" ]; then
+        act_args="--env FAIL_FAST=true"
+    else
+        act_args="--env FAIL_FAST=false"
     fi
     
-    echo "✅ Successfully tested $taskfile"
-    return 0
-}
-
-# Main script
-if [ "$1" = "--all" ]; then
-    # Test all taskfiles
-    echo "Testing all taskfiles..."
-    failed=0
-    for taskfile in .taskfiles/*/Taskfile.yml; do
-        if ! test_taskfile "$taskfile"; then
-            ((failed++))
+    # Test each taskfile
+    for taskfile in $taskfiles; do
+        taskfile=$(basename "$(dirname "$taskfile")")
+        echo "Testing taskfile: $taskfile"
+        if ! act push -j test-one --env TASKFILE="$taskfile" -P ubuntu-latest=ghcr.io/catthehacker/ubuntu:act-latest; then
+            echo "❌ Failed to test taskfile: $taskfile"
+            if [ "$fail_fast" = "true" ]; then
+                return 1
+            fi
         fi
     done
     
-    if [ "$failed" -gt 0 ]; then
-        echo "❌ $failed taskfile(s) failed testing"
-        exit 1
-    fi
-    echo "✅ All taskfiles passed testing"
-    exit 0
+    echo "✅ Successfully tested taskfiles"
+    return 0
+}
+
+# Parse arguments
+fail_fast=false
+test_all=false
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --all)
+            test_all=true
+            shift
+            ;;
+        --fail-fast)
+            fail_fast=true
+            shift
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Usage: $0 [--all] [--fail-fast]"
+            exit 1
+            ;;
+    esac
+done
+
+# Stage files if testing all
+if [ "$test_all" = "true" ]; then
+    git add .taskfiles/*/Taskfile.yml
 fi
 
 # Get list of changed/added taskfiles
-changed_files=$(git diff --cached --name-only --diff-filter=AM | grep "Taskfile.yml$" || true)
+changed_files=$(git diff --cached --name-only --diff-filter=AM | grep -E "^\.taskfiles/.+/Taskfile\.yml$" || true)
 
 if [ -z "$changed_files" ]; then
-    echo "No taskfiles were changed/added"
+    echo "No taskfiles changed, skipping tests"
     exit 0
 fi
 
-# Test each changed taskfile
-failed=0
-for file in $changed_files; do
-    if ! test_taskfile "$file"; then
-        ((failed++))
-    fi
-done
+# Run tests
+test_taskfiles "$fail_fast" "$changed_files"
 
-if [ "$failed" -gt 0 ]; then
-    echo "❌ $failed taskfile(s) failed testing"
-    exit 1
+# Unstage files if we were testing all
+if [ "$test_all" = "true" ]; then
+    git restore --staged .taskfiles/*/Taskfile.yml
 fi
 
-echo "✅ All changed taskfiles passed testing"
 exit 0
