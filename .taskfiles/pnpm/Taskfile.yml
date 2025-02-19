@@ -3,10 +3,28 @@
 version: "3"
 
 tasks:
+  default:
+    desc: "Install pnpm"
+    deps:
+      - task: install
+
   install:
     desc: "Install pnpm"
+    deps:
+      - task: node-check
     run: once
     status:
       - command -v pnpm >/dev/null 2>&1
     cmds:
       - curl -fsSL https://get.pnpm.io/install.sh | sh -
+      - source $HOME/.bashrc
+      - pnpm --version
+
+  node-check:
+    desc: "Check Node.js installation"
+    internal: true
+    status:
+      - command -v node >/dev/null 2>&1
+    cmds:
+      - echo "Node.js is required. Please install Node.js first using 'task node:install'"
+      - exit 1
