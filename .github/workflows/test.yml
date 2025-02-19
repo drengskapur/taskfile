@@ -20,15 +20,22 @@ jobs:
         run: |
           chmod +x ./install.sh
           ./install.sh
+          source ~/.bashrc
 
       - name: Check Task version
-        run: task --version
+        run: |
+          source ~/.bashrc
+          task --version
 
       - name: Validate main Taskfile syntax
-        run: task --dry
+        run: |
+          source ~/.bashrc
+          task --dry
 
       - name: List available tasks
-        run: task --list
+        run: |
+          source ~/.bashrc
+          task --list
 
   # Test individual taskfiles in parallel
   test-taskfiles:
@@ -66,6 +73,7 @@ jobs:
         run: |
           chmod +x ./install.sh
           ./install.sh
+          source ~/.bashrc
 
       - name: Create shell config
         run: touch "$SHELL_RC"
@@ -73,6 +81,7 @@ jobs:
       - name: Test ${{ matrix.taskfile }} taskfile
         run: |
           set -e
+          source ~/.bashrc
           TASKFILE=".taskfiles/${{ matrix.taskfile }}/Taskfile.yml"
           echo "Testing $TASKFILE..."
           
