@@ -1,42 +1,14 @@
 # yaml-language-server: $schema=https://taskfile.dev/schema.json
-#
-# JQ Taskfile
-# ----------
-# Documentation: https://jqlang.github.io/jq/
-# GitHub: https://github.com/jqlang/jq
-#
-# Notes:
-# - Installs jq globally with sudo
-# - Uses system-wide installation in /usr/local/bin
-# - Static binary with no dependencies
 ---
 version: "3"
 
-silent: true
-
-vars:
-  INSTALL_TYPE: system  # Requires sudo for system-wide binary installation
-  HOME:
-    sh: echo $HOME
-  SHELL:
-    sh: basename $SHELL
-  USAGE: |-
-    jq - Command-line JSON processor
-    Documentation: https://jqlang.github.io/jq/
-
 tasks:
   default:
-    deps: [install]
-
-  help:
-    desc: "Show information about jq"
-    cmds:
-      - echo "{{.USAGE}}"
+    deps:
+      - task: install
 
   install:
     desc: "Install jq"
-    summary: >
-      Install jq JSON processor with default configuration
     vars:
       LATEST_VERSION:
         sh: curl -s https://api.github.com/repos/jqlang/jq/releases/latest | jq -r '.tag_name | sub("^jq-"; "")'
@@ -51,20 +23,3 @@ tasks:
       - chmod +x jq-linux64
       - sudo mv jq-linux64 /usr/local/bin/jq
       - jq --version
-
-  process:
-    desc: "Process JSON input with jq"
-    summary: Run jq command on input file or stdin
-    cmds:
-      - jq {{.CLI_ARGS}}
-
-  validate:
-    desc: "Validate JSON file(s)"
-    summary: Check if file(s) contain valid JSON
-    cmds:
-      - |
-        if [ -n "{{.CLI_ARGS}}" ]; then
-          jq empty {{.CLI_ARGS}}
-        else
-          find . -name '*.json' -type f -exec jq empty {} \;
-        fi

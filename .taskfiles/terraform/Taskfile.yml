@@ -7,7 +7,7 @@ vars:
 tasks:
   default:
     deps: 
-      - install
+      - task: install
 
   install:
     desc: "Install Terraform"
