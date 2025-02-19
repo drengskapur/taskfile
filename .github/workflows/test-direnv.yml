@@ -24,10 +24,10 @@ jobs:
         run: git config --global --add safe.directory /home/user/taskfile
 
       - name: Install direnv
-        run: task direnv:install
+        run: cd .taskfiles/direnv && task install
 
       - name: Verify direnv Installation
-        run: task direnv:verify
+        run: cd .taskfiles/direnv && task verify
 
   catthehacker:
     name: catthehacker/ubuntu
@@ -43,7 +43,7 @@ jobs:
         run: git config --global --add safe.directory /home/user/taskfile
 
       - name: Install direnv
-        run: task direnv:install
+        run: cd .taskfiles/direnv && task install
 
       - name: Verify direnv Installation
-        run: task direnv:verify
+        run: cd .taskfiles/direnv && task verify
