@@ -1,49 +1,35 @@
-name: "Install - mix"
+name: mix
 
 on:
   push:
     paths:
       - '.taskfiles/mix/**'
+      - '.github/workflows/mix.yml'
   pull_request:
     paths:
       - '.taskfiles/mix/**'
+      - '.github/workflows/mix.yml'
   workflow_dispatch:
 
 jobs:
-  ubuntu-latest:
-    name: Ubuntu Latest
+  test:
+    name: Test mix Tasks
     runs-on: ubuntu-latest
+    container:
+      image: ubuntu:22.04
+      options: --user root
     steps:
       - uses: actions/checkout@v4
-
+        with:
+          ref: develop
+      - name: Install dependencies
+        run: |
+          apt-get update
+          apt-get install -y curl jq sudo
       - name: Install Task
         run: |
-          sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b /usr/local/bin
-
-      - name: Configure Git
-        run: git config --global --add safe.directory /home/user/taskfile
-
-      - name: Install mix
-        run: task mix:install
-
-      - name: Verify mix Installation
-        run: task mix:verify
-
-  catthehacker:
-    name: catthehacker/ubuntu
-    runs-on: catthehacker/ubuntu:full
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Task
-        run: |
-          sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b /usr/local/bin
-
-      - name: Configure Git
-        run: git config --global --add safe.directory /home/user/taskfile
-
-      - name: Install mix
-        run: task mix:install
-
-      - name: Verify mix Installation
-        run: task mix:verify
+          curl -sL https://taskfile.dev/install.sh | sh
+          mv ./bin/task /usr/local/bin/
+          task --version
+      - name: List tasks
+        run: task --dir .taskfiles/mix --list-all

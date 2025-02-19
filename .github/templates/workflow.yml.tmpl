@@ -13,21 +13,23 @@ on:
 
 jobs:
   test:
-    name: Test {{.WorkflowName}} Tasks
-    strategy:
-      matrix:
-        os: [ubuntu-latest]
-        arch: [amd64, arm64]
-        include:
-          - os: macos-latest
-            arch: amd64
-    runs-on: ${{ matrix.os }}
+    name: Test {{.TaskfileDir}} Tasks
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:22.04
+      options: --user root
     steps:
       - uses: actions/checkout@v4
-      - uses: arduino/setup-task@v1
         with:
-          version: 3.x
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - run: task list
-      - run: task --dir .taskfiles/{{.TaskfileDir}} --list
-      - run: task --dir .taskfiles/{{.TaskfileDir}} --list-all
+          ref: develop
+      - name: Install dependencies
+        run: |
+          apt-get update
+          apt-get install -y curl jq sudo
+      - name: Install Task
+        run: |
+          curl -sL https://taskfile.dev/install.sh | sh
+          mv ./bin/task /usr/local/bin/
+          task --version
+      - name: List tasks
+        run: task --dir .taskfiles/{{.TaskfileDir}} --list-all
