@@ -29,16 +29,15 @@ tasks:
       - sudo chown root:root /usr/local/bin/doctl
       - sudo chmod 755 /usr/local/bin/doctl
       - doctl version
-      - defer: rm -f doctl-{{.LATEST_VERSION}}-linux-amd64.tar.gz
+      - rm -f doctl-{{.LATEST_VERSION}}-linux-amd64.tar.gz
 
   install:metrics-agent:
     desc: "Install Metrics Agent"
     run: once
-    defer:
-      - rm -f install.sh
     cmds:
       - curl -sSL https://repos.insights.digitalocean.com/install.sh -o install.sh
       - sudo bash install.sh
+      - rm -f install.sh
 
   debug:cloudinit:
     desc: "Debug Cloud Init logs"
