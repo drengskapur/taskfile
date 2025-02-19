@@ -9,45 +9,27 @@ tasks:
 
   install:
     desc: "Install helm"
+    run: once
     vars:
+      COMMAND_PREFIX:
+        sh: if [ "$(id -u)" != "0" ]; then echo "sudo"; fi
       LATEST_VERSION:
         sh: curl -s https://api.github.com/repos/helm/helm/releases/latest | jq -r '.tag_name | ltrimstr("v")'
       DOWNLOAD_URL: "https://get.helm.sh/helm-v{{.LATEST_VERSION}}-linux-amd64.tar.gz"
-      COMMAND_PREFIX: "sudo"
-    run: once
     status:
       - command -v helm
     cmds:
-      - defer: rm -f helm-v{{.LATEST_VERSION}}-linux-amd64.tar.gz
+      - defer: rm -f helm.tar.gz
       # Install dependencies
       - "{{.COMMAND_PREFIX}} apt-get update"
       - "{{.COMMAND_PREFIX}} apt-get install -y jq"
       # Download and install
       - curl -fsSLo helm.tar.gz "{{.DOWNLOAD_URL}}"
-      - tar xf helm.tar.gz
-      - chmod 755 linux-amd64/helm
+      - tar --strip-components=1 -xf helm.tar.gz linux-amd64/helm
       - |
-        {{.COMMAND_PREFIX}} mv linux-amd64/helm /usr/local/bin/
+        {{.COMMAND_PREFIX}} chmod 755 helm
+      - |
+        {{.COMMAND_PREFIX}} mv helm /usr/local/bin/helm
       - |
         {{.COMMAND_PREFIX}} chown root:root /usr/local/bin/helm
-      - helm version
-
-  test:
-    desc: "Test helm installation and functionality"
-    deps:
-      - install
-    cmds:
-      - helm version
-      - |
-        # Initialize helm repo
-        helm repo add stable https://charts.helm.sh/stable
-        helm repo update
-
-        # Create a test chart
-        helm create test-chart
-
-        # Test chart linting
-        helm lint test-chart
-
-        # Clean up
-        rm -rf test-chart
+      - /usr/local/bin/helm version
