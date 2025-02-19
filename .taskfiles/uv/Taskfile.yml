@@ -4,14 +4,22 @@ version: "3"
 
 tasks:
   default:
-    deps: [install]
+    desc: "Install uv"
+    deps:
+      - task: install
 
   install:
     desc: "Install uv"
+    vars:
+      DOWNLOAD_URL: "https://astral.sh/uv/install.sh"
+      INSTALL_DIR: "/usr/local/bin"
     run: once
     status:
       - command -v uv >/dev/null 2>&1
-    env:
-      UV_INSTALL_DIR: "/usr/local/bin"
+    defer:
+      - rm -f install.sh
     cmds:
-      - curl -LsSf https://astral.sh/uv/install.sh | sh
+      - curl -fsSLO "{{.DOWNLOAD_URL}}"
+      - chmod +x install.sh
+      - UV_INSTALL_DIR="{{.INSTALL_DIR}}" sudo -E ./install.sh
+      - uv --version
