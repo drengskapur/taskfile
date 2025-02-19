@@ -1,85 +1,34 @@
 name: Test Act Installation
 
 on:
-  push:
-    paths:
-      - ".taskfiles/act/**"
+  workflow_dispatch:
   pull_request:
     paths:
-      - ".taskfiles/act/**"
-  workflow_dispatch:
+      - '.taskfiles/act/**'
+  push:
+    branches: [ main, develop ]
+    paths:
+      - '.taskfiles/act/**'
 
 jobs:
-  test:
-    name: Test Act installation
-    runs-on: ubuntu-22.04
-    if: github.repository == 'drengskapur/taskfile' && !contains(github.event.act, 'true')
-    container:
-      image: ubuntu:22.04
-      options: --privileged --user root --rm
-    env:
-      HOME: /root
-      PATH: /bin:/usr/bin:/usr/local/bin
-    defaults:
-      run:
-        shell: /bin/sh -e {0}
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Install base system utilities
-        run: |
-          apt-get update
-          apt-get install -y bash curl sudo ca-certificates jq
-
-      - name: Cache Task binary
-        id: cache-task
-        uses: actions/cache@v3
-        with:
-          path: /usr/local/bin/task
-          key: ${{ runner.os }}-task-${{ hashFiles('**/test.yml') }}
-
-      - name: Install Task
-        if: steps.cache-task.outputs.cache-hit != 'true'
-        run: |
-          sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b /usr/local/bin
-          task --version
-
-      - name: Install Act
-        run: task install
-
-      - name: Check Act version
-        run: |
-          act --version
-
   test-local:
     name: Test Act installation (Local)
     runs-on: ubuntu-22.04
-    if: contains(github.event.act, 'true')
-    container:
-      image: ubuntu:22.04
-      options: --privileged --user root --rm
-    env:
-      HOME: /root
-      PATH: /bin:/usr/bin:/usr/local/bin
-    defaults:
-      run:
-        shell: /bin/sh -e {0}
     steps:
       - uses: actions/checkout@v3
-
-      - name: Install base system utilities
-        run: |
-          apt-get update
-          apt-get install -y bash curl sudo ca-certificates jq
 
       - name: Install Task
         run: |
           sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b /usr/local/bin
-          task --version
 
       - name: Install Act
+        working-directory: .taskfiles/act
         run: task install
 
-      - name: Check Act version
+      - name: Verify installation
         run: |
+          command -v act >/dev/null 2>&1 || (echo "act not found" && exit 1)
           act --version
+
+      - name: Complete job
+        run: echo "Test completed successfully"

@@ -19,6 +19,12 @@ tasks:
       - source $HOME/.bashrc
       - pnpm --version
 
+  test:
+    desc: "Test pnpm installation"
+    cmds:
+      - |
+        act -j test-local -W .taskfiles/pnpm/test-pnpm.yml -P ubuntu-22.04=ubuntu:22.04 --container-options "--privileged --rm" --eventpath <(echo '{"act": true}')
+
   node-check:
     desc: "Check Node.js installation"
     internal: true

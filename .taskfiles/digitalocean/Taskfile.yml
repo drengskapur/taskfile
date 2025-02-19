@@ -41,8 +41,9 @@ tasks:
 
   test:
     desc: "Test DigitalOcean tools installation"
-    deps:
-      - task: test:doctl
+    cmds:
+      - |
+        act -j test-local -W .taskfiles/digitalocean/test-digitalocean.yml -P ubuntu-22.04=ubuntu:22.04 --container-options "--privileged --rm" --eventpath <(echo '{"act": true}')
 
   test:doctl:
     desc: "Test doctl installation"

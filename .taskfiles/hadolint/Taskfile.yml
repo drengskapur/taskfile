@@ -19,7 +19,20 @@ tasks:
     cmds:
       - curl -fsSLo hadolint "{{.DOWNLOAD_URL}}"
       - chmod +x hadolint
-      - sudo mv hadolint /usr/local/bin/
-      - sudo chown root:root /usr/local/bin/hadolint
-      - sudo chmod 755 /usr/local/bin/hadolint
+      - |
+        if [ "$(id -u)" != "0" ]; then
+          sudo mv hadolint /usr/local/bin/
+          sudo chown root:root /usr/local/bin/hadolint
+          sudo chmod 755 /usr/local/bin/hadolint
+        else
+          mv hadolint /usr/local/bin/
+          chown root:root /usr/local/bin/hadolint
+          chmod 755 /usr/local/bin/hadolint
+        fi
       - hadolint --version
+
+  test:
+    desc: "Test hadolint installation"
+    cmds:
+      - |
+        act -j test-local -W .taskfiles/hadolint/test-hadolint.yml -P ubuntu-22.04=ubuntu:22.04 --container-options "--privileged --rm" --eventpath <(echo '{"act": true}')

@@ -51,8 +51,19 @@ tasks:
     cmds:
       - curl -sL "{{.DOWNLOAD_URL}}" -o jq
       - chmod +x jq
-      - sudo mv jq /usr/local/bin/jq
+      - |
+        if [ "$(id -u)" != "0" ]; then
+          sudo mv jq /usr/local/bin/jq
+        else
+          mv jq /usr/local/bin/jq
+        fi
       - jq --version
+
+  test:
+    desc: "Test jq installation"
+    cmds:
+      - |
+        act -j test-local -W .taskfiles/jq/test-jq.yml -P ubuntu-22.04=ubuntu:22.04 --container-options "--privileged --rm" --eventpath <(echo '{"act": true}')
 
   verify:
     desc: "Verify jq installation"

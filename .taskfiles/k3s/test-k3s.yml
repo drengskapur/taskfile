@@ -1,0 +1,107 @@
+name: Test k3s Installation
+
+on:
+  push:
+    paths:
+      - ".taskfiles/k3s/**"
+  pull_request:
+    paths:
+      - ".taskfiles/k3s/**"
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Test k3s installation
+    runs-on: ubuntu-22.04
+    if: github.repository == 'drengskapur/taskfile' && !contains(github.event.act, 'true')
+    container:
+      image: ubuntu:22.04
+      options: --privileged --user root --rm
+    env:
+      HOME: /root
+      PATH: /bin:/usr/bin:/usr/local/bin
+    defaults:
+      run:
+        shell: /bin/sh -e {0}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install base system utilities
+        run: |
+          apt-get update
+          apt-get install -y bash curl sudo ca-certificates
+
+      - name: Cache Task binary
+        id: cache-task
+        uses: actions/cache@v3
+        with:
+          path: /usr/local/bin/task
+          key: ${{ runner.os }}-task-${{ hashFiles('**/test.yml') }}
+
+      - name: Install Task
+        if: steps.cache-task.outputs.cache-hit != 'true'
+        run: |
+          sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b /usr/local/bin
+          task --version
+
+      - name: Install k3s
+        run: task install
+
+      - name: Test k3s functionality
+        run: |
+          # Wait for k3s to be ready
+          timeout 60s bash -c 'until k3s kubectl get nodes; do sleep 2; done'
+          
+          # Verify node is ready
+          k3s kubectl get nodes | grep -q "Ready"
+          
+          # Test basic deployment
+          k3s kubectl create deployment nginx --image=nginx:alpine
+          timeout 60s bash -c 'until k3s kubectl get pods | grep -q "Running"; do sleep 2; done'
+          
+          # Clean up
+          k3s kubectl delete deployment nginx
+
+  test-local:
+    name: Test k3s installation (Local)
+    runs-on: ubuntu-22.04
+    if: contains(github.event.act, 'true')
+    container:
+      image: ubuntu:22.04
+      options: --privileged --user root --rm
+    env:
+      HOME: /root
+      PATH: /bin:/usr/bin:/usr/local/bin
+    defaults:
+      run:
+        shell: /bin/sh -e {0}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install base system utilities
+        run: |
+          apt-get update
+          apt-get install -y bash curl sudo ca-certificates
+
+      - name: Install Task
+        run: |
+          sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b /usr/local/bin
+          task --version
+
+      - name: Install k3s
+        run: task install
+
+      - name: Test k3s functionality
+        run: |
+          # Wait for k3s to be ready
+          timeout 60s bash -c 'until k3s kubectl get nodes; do sleep 2; done'
+          
+          # Verify node is ready
+          k3s kubectl get nodes | grep -q "Ready"
+          
+          # Test basic deployment
+          k3s kubectl create deployment nginx --image=nginx:alpine
+          timeout 60s bash -c 'until k3s kubectl get pods | grep -q "Running"; do sleep 2; done'
+          
+          # Clean up
+          k3s kubectl delete deployment nginx

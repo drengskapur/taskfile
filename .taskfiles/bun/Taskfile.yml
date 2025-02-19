@@ -25,10 +25,9 @@ tasks:
 
   test:
     desc: "Test Bun installation"
-    deps:
-      - task: test:version
-      - task: test:help
-      - task: test:create
+    cmds:
+      - |
+        act -j test-local -W .taskfiles/bun/test-bun.yml -P ubuntu-22.04=ubuntu:22.04 --container-options "--privileged --rm" --eventpath <(echo '{"act": true}')
 
   test:version:
     internal: true

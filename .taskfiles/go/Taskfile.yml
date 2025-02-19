@@ -55,10 +55,6 @@ tasks:
 
   test:
     desc: "Test Go installation"
-    dir: "{{.TASKFILE_DIR}}"
     cmds:
       - |
-        echo "Current dir: {{.TASKFILE_DIR}}"
-        pwd
-        ls -la
-        act push -W test-go.yml --container-options "--privileged" --eventpath event.json
+        act -j test-local -W .taskfiles/go/test-go.yml -P ubuntu-22.04=ubuntu:22.04 --container-options "--privileged --rm" --eventpath <(echo '{"act": true}')

@@ -30,9 +30,16 @@ tasks:
       - defer: rm -f act_Linux_x86_64.tar.gz
       - curl -sLO "{{.DOWNLOAD_URL}}"
       - tar xf act_Linux_x86_64.tar.gz
-      - sudo mv act /usr/local/bin/
-      - sudo chown root:root /usr/local/bin/act
-      - sudo chmod 755 /usr/local/bin/act
+      - |
+        if [ "$(id -u)" != "0" ]; then
+          sudo mv act /usr/local/bin/
+          sudo chown root:root /usr/local/bin/act
+          sudo chmod 755 /usr/local/bin/act
+        else
+          mv act /usr/local/bin/
+          chown root:root /usr/local/bin/act
+          chmod 755 /usr/local/bin/act
+        fi
       - act --version
       - echo "act version {{.LATEST_VERSION}} installed"
 
@@ -48,3 +55,9 @@ tasks:
         -P ubuntu-22.04=ghcr.io/catthehacker/ubuntu:act-22.04
         -P ubuntu-20.04=ghcr.io/catthehacker/ubuntu:act-20.04
         EOF
+
+  test:
+    desc: "Test act installation"
+    cmds:
+      - command -v act >/dev/null 2>&1 || (echo "act not found" && exit 1)
+      - act --version

@@ -30,9 +30,9 @@ tasks:
 
   test:
     desc: "Test UV installation"
-    deps:
-      - task: test:version
-      - task: test:venv
+    cmds:
+      - |
+        act -j test-local -W .taskfiles/uv/test-uv.yml -P ubuntu-22.04=ubuntu:22.04 --container-options "--privileged --rm" --eventpath <(echo '{"act": true}')
 
   test:version:
     internal: true

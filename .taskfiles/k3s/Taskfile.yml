@@ -27,14 +27,27 @@ tasks:
       - command -v k3s >/dev/null 2>&1
     cmds:
       - curl -sfL https://get.k3s.io | sh -
-      - sudo chmod 644 /etc/rancher/k3s/k3s.yaml
       - |
-        mkdir -p {{.HOME}}/.kube
-        sudo cp /etc/rancher/k3s/k3s.yaml {{.HOME}}/.kube/config
-        sudo chown $(id -u):$(id -g) {{.HOME}}/.kube/config
-        chmod 600 {{.HOME}}/.kube/config
+        if [ "$(id -u)" != "0" ]; then
+          sudo chmod 644 /etc/rancher/k3s/k3s.yaml
+          mkdir -p {{.HOME}}/.kube
+          sudo cp /etc/rancher/k3s/k3s.yaml {{.HOME}}/.kube/config
+          sudo chown $(id -u):$(id -g) {{.HOME}}/.kube/config
+        else
+          chmod 644 /etc/rancher/k3s/k3s.yaml
+          mkdir -p {{.HOME}}/.kube
+          cp /etc/rancher/k3s/k3s.yaml {{.HOME}}/.kube/config
+          chown 0:0 {{.HOME}}/.kube/config
+        fi
+      - chmod 600 {{.HOME}}/.kube/config
       - echo 'export KUBECONFIG={{.HOME}}/.kube/config' >> {{.HOME}}/.bashrc
       - echo "Installation complete! Run 'source ~/.bashrc' to use kubectl"
+
+  test:
+    desc: "Test k3s installation"
+    cmds:
+      - |
+        act -j test-local -W .taskfiles/k3s/test-k3s.yml -P ubuntu-22.04=ubuntu:22.04 --container-options "--privileged --rm" --eventpath <(echo '{"act": true}')
 
   start:
     desc: "Start K3s service"

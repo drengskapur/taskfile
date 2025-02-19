@@ -1,0 +1,108 @@
+name: Test Docker Installation
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.taskfiles/docker/**'
+  push:
+    branches: [ main, develop ]
+    paths:
+      - '.taskfiles/docker/**'
+
+jobs:
+  test-local:
+    name: Test docker installation (Local)
+    runs-on: ubuntu-22.04
+    container:
+      image: docker:20.10-dind
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install base system utilities
+        run: |
+          apk add --no-cache \
+            bash \
+            curl \
+            git
+
+      - name: Install Task
+        run: |
+          sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b /usr/local/bin
+
+      - name: Start Docker daemon
+        run: |
+          dockerd &
+          sleep 5
+          docker version
+
+      - name: Test docker functionality
+        run: |
+          docker run --rm hello-world
+
+      - name: Install act
+        run: |
+          curl -s https://raw.githubusercontent.com/nektos/act/master/install.sh | bash
+
+      - name: Test act with a simple workflow
+        run: |
+          # Create a test workflow
+          mkdir -p test-act/.github/workflows
+          cat > test-act/.github/workflows/hello.yml << 'EOF'
+          name: Hello World
+          on: push
+          jobs:
+            hello:
+              runs-on: ubuntu-latest
+              steps:
+                - run: echo "Hello World"
+          EOF
+          
+          # Run act on the test workflow
+          cd test-act && act -P ubuntu-latest=docker:20.10-dind --container-options "--privileged"
+
+      - name: Complete job
+        run: echo "Test completed successfully"
+
+  test-github:
+    name: Test docker installation (GitHub)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Task
+        run: |
+          sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b /usr/local/bin
+
+      - name: Install docker
+        working-directory: .taskfiles/docker
+        run: task install
+
+      - name: Test docker installation
+        working-directory: .taskfiles/docker
+        run: task test
+
+      - name: Install act
+        run: |
+          curl -s https://raw.githubusercontent.com/nektos/act/master/install.sh | bash
+
+      - name: Test act with a simple workflow
+        run: |
+          # Create a test workflow
+          mkdir -p test-act/.github/workflows
+          cat > test-act/.github/workflows/hello.yml << 'EOF'
+          name: Hello World
+          on: push
+          jobs:
+            hello:
+              runs-on: ubuntu-latest
+              steps:
+                - run: echo "Hello World"
+          EOF
+          
+          # Run act on the test workflow
+          cd test-act && act -P ubuntu-latest=ubuntu:22.04 --container-options "--privileged"
+
+      - name: Complete job
+        run: echo "Test completed successfully"
