@@ -41,6 +41,6 @@ tasks:
   init:
     desc: "Initialize direnv in the current directory"
     cmds:
-      - echo "dotenv" > {{.TASK_WORKING_DIR}}/.envrc
-      - touch {{.TASK_WORKING_DIR}}/.env
-      - direnv allow {{.TASK_WORKING_DIR}}/.envrc
+      - echo "dotenv" > {{.USER_WORKING_DIR}}/.envrc
+      - touch {{.USER_WORKING_DIR}}/.env
+      - direnv allow {{.USER_WORKING_DIR}}/.envrc
