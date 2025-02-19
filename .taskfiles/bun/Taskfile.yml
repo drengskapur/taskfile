@@ -2,22 +2,23 @@
 ---
 version: "3"
 
+vars:
+  HOME:
+    sh: echo $HOME
+
 tasks:
+  default:
+    deps:
+      - task: install
+
   install:
+    desc: "Install Bun"
     run: once
     status:
       - command -v bun >/dev/null 2>&1
-    deps:
-      - task: install-deps
-    vars:
-      HOME:
-        sh: echo $HOME
     cmds:
       - curl -fsSL https://bun.sh/install | bash
-      - sudo mv {{.HOME}}/.bun/bin/bun /usr/local/bin/
+      - sudo mv "{{.HOME}}/.bun/bin/bun" /usr/local/bin/
       - sudo chown root:root /usr/local/bin/bun
       - sudo chmod 755 /usr/local/bin/bun
-
-  install-deps:
-    cmds:
-      - sudo apt install -y unzip
+      - /usr/local/bin/bun --version
