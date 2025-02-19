@@ -13,7 +13,7 @@
     "build": "tsc",
     "dev": "tsc -w",
     "lint": "biome check .",
-    "test": "vitest run"
+    "test": "TESTCONTAINERS_RYUK_DISABLED=true TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock vitest run --logHeapUsage --reporter=verbose"
   },
   "dependencies": {
     "testcontainers": "^10.7.1"

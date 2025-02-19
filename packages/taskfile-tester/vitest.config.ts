@@ -16,10 +16,10 @@ export default defineConfig({
     sequence: {
       shuffle: false
     },
-    reporters: ['verbose'],
-    onConsoleLog(log, type) {
-      // Don't filter any console logs
-      return false;
-    }
+    silent: false,
+    reporters: 'verbose',
+    onConsoleLog(log) {
+      return false; // Show all console logs
+    },
   },
 });
