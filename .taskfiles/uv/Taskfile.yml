@@ -4,7 +4,6 @@ version: "3"
 
 tasks:
   default:
-    desc: "Install uv"
     deps:
       - task: install
 
@@ -16,6 +15,12 @@ tasks:
     run: once
     status:
       - command -v uv >/dev/null 2>&1
+      - test -x "{{.INSTALL_DIR}}/uv"
+    preconditions:
+      - sh: command -v curl >/dev/null 2>&1
+        msg: "curl is required to install uv"
+      - sh: command -v sudo >/dev/null 2>&1
+        msg: "sudo is required to install uv"
     cmds:
       - curl -fsSLO "{{.DOWNLOAD_URL}}"
       - defer: rm -f install.sh
