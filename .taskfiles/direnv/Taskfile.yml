@@ -40,7 +40,10 @@ tasks:
 
   init:
     desc: "Initialize direnv in the current directory"
+    vars:
+      PWD:
+        sh: pwd
     cmds:
-      - echo "dotenv" > .envrc
-      - touch .env
-      - direnv allow
+      - echo "dotenv" > {{.PWD}}/.envrc
+      - touch {{.PWD}}/.env
+      - direnv allow {{.PWD}}/.envrc
