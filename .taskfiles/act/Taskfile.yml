@@ -29,6 +29,7 @@ tasks:
       - sudo chown root:root /usr/local/bin/act
       - sudo chmod 755 /usr/local/bin/act
       - act --version
+      - echo "act version {{.LATEST_VERSION}} installed"
 
   setup:config:
     desc: "Configure act defaults"

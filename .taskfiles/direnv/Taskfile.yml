@@ -28,3 +28,4 @@ tasks:
           echo 'eval "$(direnv hook bash)"' >> "$HOME/.bashrc"
         fi
       - direnv --version
+      - echo "Direnv version {{.LATEST_VERSION}} installed successfully"

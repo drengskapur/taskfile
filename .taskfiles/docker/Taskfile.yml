@@ -21,3 +21,6 @@ tasks:
       - sudo systemctl enable docker
       - sudo systemctl start docker
       - /usr/bin/docker run hello-world
+      - docker version
+      - docker compose version
+      - docker --version
