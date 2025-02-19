@@ -14,37 +14,56 @@ tasks:
       - install
 
   install:
-    desc: Install Erlang and elixir-update
+    desc: Install Erlang and Elixir
     run: once
     status:
-      - command -v elixir
-      - command -v erl
+      - command -v mix
     cmds:
       - defer: rm -f install.sh
       - |
         {{.COMMAND_PREFIX}} apt-get update
       - |
-        {{.COMMAND_PREFIX}} apt-get install -y jq
+        {{.COMMAND_PREFIX}} apt-get install -y curl jq
+      # Download and run installer
       - curl -fsSLo install.sh https://raw.githubusercontent.com/elixir-lang/elixir-lang.github.com/main/install.sh
-      - chmod +x install.sh
-      # Run install and capture output
       - |
-        INSTALL_OUTPUT=$(./install.sh elixir@latest otp@latest)
-        OTP_VERSION=$(echo "$INSTALL_OUTPUT" | grep -o "otp/[0-9.]*" | head -1 | cut -d'/' -f2)
-        ELIXIR_VERSION=$(echo "$INSTALL_OUTPUT" | grep -o "elixir/[0-9.].*-otp-[0-9]*" | head -1 | cut -d'/' -f2)
-
-        # Copy Erlang installation
+        {{.COMMAND_PREFIX}} chmod 755 install.sh
+      # Run installer and save output
+      - |
+        ./install.sh elixir@latest otp@latest > install_output.txt
+      # Install Erlang
+      - |
         {{.COMMAND_PREFIX}} mkdir -p /usr/local/lib/erlang
+      - |
+        OTP_VERSION=$(grep -o "otp/[0-9.]*" install_output.txt | head -1 | cut -d'/' -f2)
+        if [ -z "$OTP_VERSION" ]; then
+          echo "Failed to detect OTP version"
+          exit 1
+        fi
         {{.COMMAND_PREFIX}} cp -r {{.HOME}}/.elixir-install/installs/otp/${OTP_VERSION}/* /usr/local/lib/erlang/
+      - |
         {{.COMMAND_PREFIX}} ln -sf /usr/local/lib/erlang/bin/erl /usr/local/bin/erl
+      - |
         {{.COMMAND_PREFIX}} ln -sf /usr/local/lib/erlang/bin/erlc /usr/local/bin/erlc
-
-        # Copy Elixir installation
+      # Install Elixir
+      - |
         {{.COMMAND_PREFIX}} mkdir -p /usr/local/lib/elixir
+      - |
+        ELIXIR_VERSION=$(grep -o "elixir/[0-9.].*-otp-[0-9]*" install_output.txt | head -1 | cut -d'/' -f2)
+        if [ -z "$ELIXIR_VERSION" ]; then
+          echo "Failed to detect Elixir version"
+          exit 1
+        fi
         {{.COMMAND_PREFIX}} cp -r {{.HOME}}/.elixir-install/installs/elixir/${ELIXIR_VERSION}/* /usr/local/lib/elixir/
+      - |
         {{.COMMAND_PREFIX}} ln -sf /usr/local/lib/elixir/bin/elixir /usr/local/bin/elixir
+      - |
         {{.COMMAND_PREFIX}} ln -sf /usr/local/lib/elixir/bin/mix /usr/local/bin/mix
+      - |
         {{.COMMAND_PREFIX}} ln -sf /usr/local/lib/elixir/bin/iex /usr/local/bin/iex
+      # Clean up
+      - rm -f install_output.txt
       # Verify installations
       - /usr/local/bin/erl -version
       - /usr/local/bin/elixir --version
+      - /usr/local/bin/mix --version
