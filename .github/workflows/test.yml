@@ -9,6 +9,9 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      SHELL: /bin/bash
+      SHELL_RC: ${{ github.workspace }}/.bashrc
     steps:
       - uses: actions/checkout@v4
 
@@ -23,13 +26,17 @@ jobs:
 
       - name: Validate Taskfile syntax
         run: |
+          set -e
           # First check the main Taskfile
-          task --dry
+          task --dry || exit 1
           
           # Then check each taskfile individually
           for taskfile in .taskfiles/*/Taskfile.yml; do
             echo "Checking $taskfile..."
-            task --taskfile "$taskfile" --dry
+            task --taskfile "$taskfile" --dry || {
+              echo "Error checking $taskfile"
+              exit 1
+            }
           done
 
       - name: List available tasks
@@ -37,11 +44,18 @@ jobs:
 
       - name: Test each task with --dry
         run: |
+          set -e
+          # Create dummy .bashrc for shell configuration tasks
+          touch "$SHELL_RC"
+          
           # Get all available tasks
           TASKS=$(task --list | grep -v "Available tasks" | grep "^* " | cut -d' ' -f2 | cut -d':' -f1 | sort -u)
           
           # Try each task with --dry
           for task in $TASKS; do
             echo "Testing task: $task"
-            task "$task" --dry || echo "Warning: Task $task failed dry run"
+            if ! task "$task" --dry; then
+              echo "Error testing task: $task"
+              exit 1
+            fi
           done
