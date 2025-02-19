@@ -18,14 +18,13 @@ tasks:
     status:
       - command -v direnv >/dev/null 2>&1
     cmds:
-      - curl -fsSLo direnv "{{.DOWNLOAD_URL}}"
-      - chmod +x direnv
-      - sudo mv direnv /usr/local/bin/
+      - curl -sLO "{{.DOWNLOAD_URL}}"
+      - chmod +x direnv.linux-amd64
+      - sudo mv direnv.linux-amd64 /usr/local/bin/direnv
       - sudo chown root:root /usr/local/bin/direnv
       - sudo chmod 755 /usr/local/bin/direnv
       - |
-        if ! grep -q "eval \"\$(direnv hook bash)\"" "$HOME/.bashrc"; then
+        if ! grep -q 'eval "$(direnv hook bash)"' "$HOME/.bashrc"; then
           echo 'eval "$(direnv hook bash)"' >> "$HOME/.bashrc"
         fi
       - direnv --version
-      - echo "Direnv version {{.LATEST_VERSION}} installed successfully"
