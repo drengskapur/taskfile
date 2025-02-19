@@ -1,26 +1,30 @@
 {
   "name": "taskfile",
-  "version": "1.0.0",
-  "description": "A collection of taskfiles for common developer tools and applications.",
-  "main": "index.js",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "turbo build",
+    "dev": "turbo dev",
+    "lint": "turbo lint",
+    "test": "turbo test",
+    "format": "biome format --write .",
     "prepare": "husky"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/drengskapur/taskfile.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/drengskapur/taskfile/issues"
-  },
-  "homepage": "https://github.com/drengskapur/taskfile#readme",
   "devDependencies": {
+    "@biomejs/biome": "1.9.4",
     "@commitlint/cli": "19.7.1",
     "@commitlint/config-conventional": "19.7.1",
-    "husky": "^9.1.7"
+    "@types/node": "^20.11.19",
+    "husky": "^9.1.7",
+    "turbo": "^2.4.2",
+    "typescript": "^5.3.3",
+    "ultracite": "4.1.19"
+  },
+  "packageManager": "pnpm@10.4.1",
+  "engines": {
+    "node": ">=22.0.0"
   }
 }

@@ -34,80 +34,70 @@ vars:
 
 tasks:
   default:
-    desc: "Show available tasks"
+    desc: Show available tasks
     cmds:
-      - task --list
+      - task -l
 
   noop:
     internal: true
     cmd: noop() { :; }
 
   test:
-    desc: "Run tests using act"
-    summary: |
-      Run tests using act.
-      
-      Options:
-        FAIL_FAST=true  # Stop on first failure
-      
-      Example:
-        task test                  # Run all tests
-        task test FAIL_FAST=true  # Run all tests, stop on first failure
-    deps:
-      - task: _install:act
-      - task: _install:jq
-      - task: _ensure_log_dir
+    desc: Run all taskfile tests in container
     cmds:
       - |
-        echo "Starting tests with FAIL_FAST={{.FAIL_FAST}}"
-        echo "Log file: {{.LOG_DIR}}/test_all_{{.TIMESTAMP}}.log"
-        act push -j test-all -P ubuntu-latest=ghcr.io/catthehacker/ubuntu:act-latest 2>&1 | tee {{.LOG_DIR}}/test_all_{{.TIMESTAMP}}.log
-
-  test:one:
-    desc: "Test a specific taskfile"
-    summary: |
-      Test a specific taskfile using act.
-      
-      Options:
-        FAIL_FAST=true  # Stop on first failure
-      
-      Example:
-        task test:one -- docker                  # Test .taskfiles/docker/Taskfile.yml
-        task test:one -- aws FAIL_FAST=true     # Test .taskfiles/aws/Taskfile.yml, stop on first failure
-    deps:
-      - task: _install:act
-      - task: _install:jq
-      - task: _ensure_log_dir
-    vars:
-      TASKFILE: '{{default "" .CLI_ARGS}}'
-    preconditions:
-      - sh: test -n "{{.TASKFILE}}"
-        msg: "Please specify a taskfile name (without path or extension)"
-      - sh: test -f ".taskfiles/{{.TASKFILE}}/Taskfile.yml"
-        msg: "Taskfile .taskfiles/{{.TASKFILE}}/Taskfile.yml does not exist"
-    cmds:
+        docker build -t taskfile-test-base - <<'EOF'
+        FROM ubuntu:latest
+        ENV DEBIAN_FRONTEND=noninteractive
+        ENV SHELL=/bin/bash
+        RUN apt-get update && apt-get install -y curl git sudo
+        RUN curl -sL https://taskfile.dev/install.sh | sh && mv ./bin/task /usr/local/bin/
+        EOF
       - |
-        echo "Starting test for {{.TASKFILE}} with FAIL_FAST={{.FAIL_FAST}}"
-        echo "Log file: {{.LOG_DIR}}/test_{{.TASKFILE}}_{{.TIMESTAMP}}.log"
-        act push -j test-one --env TASKFILE="{{.TASKFILE}}" -P ubuntu-latest=ghcr.io/catthehacker/ubuntu:act-latest 2>&1 | tee {{.LOG_DIR}}/test_{{.TASKFILE}}_{{.TIMESTAMP}}.log
-
-  test:status:
-    desc: "Check status of running tests"
-    deps:
-      - task: _ensure_dirs
-    cmds:
-      - |
-        for pid_file in {{.PID_DIR}}/test_*.pid; do
-          if [ -f "$pid_file" ]; then
-            pid=$(cat "$pid_file")
-            if ps -p "$pid" > /dev/null; then
-              echo "Test $(basename "$pid_file" .pid) is still running (PID: $pid)"
-            else
-              echo "Test $(basename "$pid_file" .pid) has finished"
-              rm "$pid_file"
-            fi
+        for dir in .taskfiles/*; do
+          if [ -f "$dir/Taskfile.yml" ]; then
+            name=$(basename "$dir")
+            echo "Testing $name..."
+            docker run --rm -v $(pwd):/workspace -w /workspace taskfile-test-base task $name:install
           fi
         done
+
+  test:*:
+    desc: Test a specific taskfile in container
+    vars:
+      TASKFILE: '{{index .MATCH 0}}'
+    cmds:
+      - |
+        docker build -t taskfile-test-base - <<'EOF'
+        FROM ubuntu:latest
+        ENV DEBIAN_FRONTEND=noninteractive
+        ENV SHELL=/bin/bash
+        RUN apt-get update && apt-get install -y curl git sudo
+        RUN curl -sL https://taskfile.dev/install.sh | sh && mv ./bin/task /usr/local/bin/
+        EOF
+      - echo "Testing {{.TASKFILE}}..."
+      - docker run --rm -v $(pwd):/workspace -w /workspace taskfile-test-base task {{.TASKFILE}}:install
+
+  test:status:
+    desc: Check status of running tests
+    cmds:
+      - docker ps | grep taskfile-test
+
+  _install:act:
+    desc: Install act
+    internal: true
+    run: once
+    status:
+      - command -v act >/dev/null 2>&1
+    cmds:
+      - curl -sLO "https://github.com/nektos/act/releases/download/v0.2.74/act_Linux_x86_64.tar.gz"
+      - tar xf act_Linux_x86_64.tar.gz
+      - sudo mv act /usr/local/bin/
+      - sudo chown root:root /usr/local/bin/act
+      - sudo chmod 755 /usr/local/bin/act
+      - act --version
+      - echo "act version 0.2.74 installed"
+      - rm -f act_Linux_x86_64.tar.gz
 
   _ensure_dirs:
     desc: "Ensure required directories exist"
@@ -121,25 +111,6 @@ tasks:
     internal: true
     cmds:
       - mkdir -p {{.LOG_DIR}}
-
-  _install:act:
-    desc: "Install act"
-    internal: true
-    vars:
-      LATEST_VERSION:
-        sh: curl -s https://api.github.com/repos/nektos/act/releases/latest | jq -r '.tag_name | ltrimstr("v")'
-      DOWNLOAD_URL: "https://github.com/nektos/act/releases/download/v{{.LATEST_VERSION}}/act_Linux_x86_64.tar.gz"
-    run: once
-    status:
-      - command -v act >/dev/null 2>&1
-    cmds:
-      - curl -sLO "{{.DOWNLOAD_URL}}"
-      - tar xf act_Linux_x86_64.tar.gz
-      - sudo mv act /usr/local/bin/
-      - sudo chown root:root /usr/local/bin/act
-      - sudo chmod 755 /usr/local/bin/act
-      - act --version
-      - defer: rm -f act_Linux_x86_64.tar.gz
 
   _install:expect:
     desc: "Install expect package for unbuffer command"

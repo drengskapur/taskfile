@@ -7,10 +7,9 @@ on:
         description: 'Taskfile to test (leave empty to test all)'
         required: false
         type: string
-        default: ''
 
 jobs:
-  test:
+  run-taskfile-tests:
     name: Run Taskfile Tests
     runs-on: ubuntu-latest
     env:
@@ -21,25 +20,17 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install Task
-        uses: arduino/setup-task@v1
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Test specific taskfile
-        if: inputs.taskfile != ''
-        shell: bash
         run: |
-          echo "Testing ${{ inputs.taskfile }}..."
-          task ${{ inputs.taskfile }}:install
+          curl -sL https://taskfile.dev/install.sh | sh
+          sudo mv ./bin/task /usr/local/bin/
+          task --version
 
-      - name: Test all taskfiles
-        if: inputs.taskfile == ''
-        shell: bash
+      - name: Run Tests
         run: |
-          for dir in .taskfiles/*; do
-            if [ -f "$dir/Taskfile.yml" ]; then
-              name=$(basename "$dir")
-              echo "Testing $name..."
-              task $name:install
-            fi
-          done
+          if [ -n "${{ inputs.taskfile }}" ]; then
+            echo "Testing taskfile: ${{ inputs.taskfile }}"
+            task test:${{ inputs.taskfile }}
+          else
+            echo "Testing all taskfiles"
+            task test
+          fi
