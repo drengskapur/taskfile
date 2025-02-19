@@ -60,7 +60,6 @@ tasks:
     status:
       - command -v fnm >/dev/null 2>&1
     cmds:
+      - defer: rm -rf {{.TMP_DIR}}
       - bash {{.TMP_DIR}}/install.sh --install-dir "{{.INSTALL_DIR}}" --skip-shell
       - task: setup:shell
-    defer:
-      - rm -rf {{.TMP_DIR}}

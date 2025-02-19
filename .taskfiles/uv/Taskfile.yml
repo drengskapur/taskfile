@@ -16,10 +16,9 @@ tasks:
     run: once
     status:
       - command -v uv >/dev/null 2>&1
-    defer:
-      - rm -f install.sh
     cmds:
       - curl -fsSLO "{{.DOWNLOAD_URL}}"
+      - defer: rm -f install.sh
       - chmod +x install.sh
       - UV_INSTALL_DIR="{{.INSTALL_DIR}}" sudo -E ./install.sh
       - uv --version

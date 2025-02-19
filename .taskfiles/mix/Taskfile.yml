@@ -35,10 +35,9 @@ tasks:
     run: once
     status:
       - command -v "{{.HOME}}/.elixir-install/installs/otp/{{.LATEST_OTP_VERSION}}/bin/erl"
-    defer:
-      - rm -f install.sh
     cmds:
       - curl -fsSLO https://raw.githubusercontent.com/elixir-lang/elixir-lang.github.com/main/install.sh
+      - defer: rm -f install.sh
       - chmod +x install.sh
       - ./install.sh otp@latest
       - |
@@ -67,10 +66,9 @@ tasks:
     run: once
     status:
       - command -v "{{.HOME}}/.elixir-install/installs/elixir/{{.LATEST_ELIXIR_VERSION}}-otp-{{.LATEST_OTP_MAJOR_VERSION}}/bin/elixir"
-    defer:
-      - rm -f install.sh
     cmds:
       - curl -fsSLO https://raw.githubusercontent.com/elixir-lang/elixir-lang.github.com/main/install.sh
+      - defer: rm -f install.sh
       - chmod +x install.sh
       - ./install.sh elixir@latest
       - |
@@ -104,10 +102,9 @@ tasks:
     run: once
     status:
       - command -v "{{.HOME}}/.elixir-install/installs/otp/{{.LATEST_OTP_VERSION}}/bin/erl"
-    defer:
-      - rm -f install.sh
     cmds:
       - curl -fsSLO https://raw.githubusercontent.com/elixir-lang/elixir-lang.github.com/main/install.sh
+      - defer: rm -f install.sh
       - chmod +x install.sh
       - ./install.sh otp@latest
       - |
@@ -136,10 +133,9 @@ tasks:
     run: once
     status:
       - command -v "{{.HOME}}/.elixir-install/installs/elixir/{{.LATEST_ELIXIR_VERSION}}-otp-{{.LATEST_OTP_MAJOR_VERSION}}/bin/elixir"
-    defer:
-      - rm -f install.sh
     cmds:
       - curl -fsSLO https://raw.githubusercontent.com/elixir-lang/elixir-lang.github.com/main/install.sh
+      - defer: rm -f install.sh
       - chmod +x install.sh
       - ./install.sh elixir@latest
       - |

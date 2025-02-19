@@ -11,15 +11,15 @@ tasks:
     desc: "Install jq"
     vars:
       LATEST_VERSION:
-        sh: curl -s https://api.github.com/repos/jqlang/jq/releases/latest | jq -r '.tag_name | sub("^jq-"; "")'
-      DOWNLOAD_URL: "https://github.com/jqlang/jq/releases/download/jq-{{.LATEST_VERSION}}/jq-linux64"
+        sh: curl -s https://api.github.com/repos/jqlang/jq/releases/latest | jq -r '.tag_name | ltrimstr("jq-")'
+      DOWNLOAD_URL: "https://github.com/jqlang/jq/releases/download/jq-{{.LATEST_VERSION}}/jq-linux-amd64"
     run: once
     status:
       - command -v jq >/dev/null 2>&1
-    defer:
-      - rm -f jq-linux64
     cmds:
       - curl -sLO "{{.DOWNLOAD_URL}}"
-      - chmod +x jq-linux64
-      - sudo mv jq-linux64 /usr/local/bin/jq
+      - chmod +x jq-linux-amd64
+      - sudo mv jq-linux-amd64 /usr/local/bin/jq
       - jq --version
+    defer:
+      - rm -f jq-linux-amd64

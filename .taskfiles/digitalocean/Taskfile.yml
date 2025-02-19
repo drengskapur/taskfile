@@ -22,9 +22,8 @@ tasks:
     run: once
     status:
       - command -v doctl >/dev/null 2>&1
-    defer:
-      - rm -f doctl-{{.LATEST_VERSION}}-linux-amd64.tar.gz
     cmds:
+      - defer: rm -f doctl-{{.LATEST_VERSION}}-linux-amd64.tar.gz
       - curl -sLO "{{.DOWNLOAD_URL}}"
       - tar xf doctl-{{.LATEST_VERSION}}-linux-amd64.tar.gz
       - sudo mv doctl /usr/local/bin/

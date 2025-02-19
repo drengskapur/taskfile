@@ -4,12 +4,12 @@ version: "3"
 
 tasks:
   default:
-    desc: "Install Helm"
+    desc: "Install helm"
     deps:
       - task: install
 
   install:
-    desc: "Install Helm"
+    desc: "Install helm"
     vars:
       LATEST_VERSION:
         sh: curl -s https://api.github.com/repos/helm/helm/releases/latest | jq -r '.tag_name | ltrimstr("v")'
@@ -17,13 +17,11 @@ tasks:
     run: once
     status:
       - command -v helm >/dev/null 2>&1
-    defer:
-      - rm -f helm-v{{.LATEST_VERSION}}-linux-amd64.tar.gz
     cmds:
+      - defer: rm -f helm-v{{.LATEST_VERSION}}-linux-amd64.tar.gz
       - curl -sLO "{{.DOWNLOAD_URL}}"
       - tar xf helm-v{{.LATEST_VERSION}}-linux-amd64.tar.gz
       - sudo mv linux-amd64/helm /usr/local/bin/
       - sudo chown root:root /usr/local/bin/helm
       - sudo chmod 755 /usr/local/bin/helm
-      - rm -rf linux-amd64
       - helm version
