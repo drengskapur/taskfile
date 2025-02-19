@@ -1,0 +1,19 @@
+{
+  "files.associations": {
+    "Taskfile.yml": "yaml",
+    "Taskfile.yaml": "yaml",
+    "**/.taskfiles/**/Taskfile.yml": "yaml",
+    "**/.taskfiles/**/Taskfile.yaml": "yaml"
+  },
+  "[yaml]": {
+    "editor.defaultFormatter": "redhat.vscode-yaml"
+  },
+  "yaml.schemas": {
+    "https://taskfile.dev/schema.json": [
+      "Taskfile.yml",
+      "Taskfile.yaml",
+      "**/.taskfiles/**/Taskfile.yml",
+      "**/.taskfiles/**/Taskfile.yaml"
+    ]
+  }
+}
