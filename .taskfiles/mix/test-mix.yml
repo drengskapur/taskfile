@@ -7,6 +7,10 @@ on:
   push:
     paths:
       - ".taskfiles/mix/**"
+  pull_request:
+    paths:
+      - ".taskfiles/mix/**"
+  workflow_dispatch:
 
 jobs:
   test:
