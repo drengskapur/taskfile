@@ -10,5 +10,16 @@ export default defineConfig({
       reporter: ['text', 'json', 'html'],
       exclude: ['**/node_modules/**', '**/dist/**', '**/tests/**'],
     },
+    testTimeout: 60000,
+    hookTimeout: 60000,
+    logHeapUsage: true,
+    sequence: {
+      shuffle: false
+    },
+    reporters: ['verbose'],
+    onConsoleLog(log, type) {
+      // Don't filter any console logs
+      return false;
+    }
   },
 });
