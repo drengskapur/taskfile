@@ -36,11 +36,7 @@ tasks:
         if ! grep -q 'eval "$(direnv hook bash)"' "{{.HOME}}/.bashrc"; then
           echo 'eval "$(direnv hook bash)"' >> "{{.HOME}}/.bashrc"
         fi
-      - /usr/local/bin/direnv --version
-
-  init:
-    desc: "Initialize direnv in the current directory"
-    cmds:
       - echo "dotenv" > {{.USER_WORKING_DIR}}/.envrc
       - touch {{.USER_WORKING_DIR}}/.env
       - direnv allow {{.USER_WORKING_DIR}}/.envrc
+      - /usr/local/bin/direnv --version
