@@ -38,6 +38,6 @@ jobs:
             if [ -f "$dir/Taskfile.yml" ]; then
               name=$(basename "$dir")
               echo "Testing $name..."
-              task $name:install || echo "Failed: $name"
+              task $name:install
             fi
           done
