@@ -4,8 +4,8 @@ version: "3"
 
 tasks:
   default:
-    cmds:
-      - task: install
+    deps: 
+      - install
 
   install:
     desc: "Install rclone and FUSE"

@@ -1,22 +1,85 @@
 # yaml-language-server: $schema=https://taskfile.dev/schema.json
+#
+# Hadolint Taskfile
+# ----------------
+# Documentation: https://github.com/hadolint/hadolint
+# GitHub: https://github.com/hadolint/hadolint
+#
+# Notes:
+# - Static binary with no dependencies
+# - Installs to /usr/local/bin with sudo
+# - Used for Dockerfile linting and shell script validation
 ---
 version: "3"
 
+silent: true
+
+vars:
+  INSTALL_TYPE: user  # Simple binary installation, no special permissions needed
+  HOME:
+    sh: echo $HOME
+  SHELL:
+    sh: basename $SHELL
+  USAGE: |-
+    Hadolint - Dockerfile linter, validate inline bash
+    Documentation: https://github.com/hadolint/hadolint
+
 tasks:
+  default:
+    deps: [install]
+
+  help:
+    desc: "Show information about Hadolint"
+    cmds:
+      - echo "{{.USAGE}}"
+
   install:
     desc: "Install hadolint"
+    summary: >-
+      Install Hadolint Dockerfile linter with default configuration
+    vars:
+      LATEST_VERSION:
+        sh: curl -s https://api.github.com/repos/hadolint/hadolint/releases/latest | jq -r '.tag_name | sub("^v"; "")'
+      DOWNLOAD_URL: "https://github.com/hadolint/hadolint/releases/download/v{{.LATEST_VERSION}}/hadolint-Linux-x86_64"
     run: once
     status:
       - command -v hadolint >/dev/null 2>&1
-    vars:
-      LATEST_VERSION:
-        sh: >-
-          curl -s https://api.github.com/repos/hadolint/hadolint/releases/latest |
-          grep '"tag_name":' | sed -E 's/.*"tag_name": "v([^"]+)".*/\1/'
-      DOWNLOAD_URL: "https://github.com/hadolint/hadolint/releases/download/v{{.LATEST_VERSION}}/hadolint-Linux-x86_64"
+    defer:
+      - rm -f hadolint-Linux-x86_64
     cmds:
-      - defer: rm -f hadolint-Linux-x86_64
       - curl -sLO "{{.DOWNLOAD_URL}}"
+      - chmod +x hadolint-Linux-x86_64
       - sudo mv hadolint-Linux-x86_64 /usr/local/bin/hadolint
-      - sudo chown root:root /usr/local/bin/hadolint
-      - sudo chmod +x /usr/local/bin/hadolint
+      - hadolint --version
+      - >-
+        case "{{.SHELL}}" in
+          bash)
+            echo "Installation complete! You may need to run 'source ~/.bashrc' or start a new shell session"
+            ;;
+          zsh)
+            echo "Installation complete! You may need to run 'source ~/.zshrc' or start a new shell session"
+            ;;
+          *)
+            echo "Installation complete! You may need to start a new shell session"
+            ;;
+        esac
+
+  config:init:
+    desc: "Create default .hadolint.yaml config"
+    summary: Create a default hadolint configuration file
+    status:
+      - test -f .hadolint.yaml
+    cmds:
+      - |
+        cat > .hadolint.yaml << EOF
+        # Default hadolint config
+        # See: https://github.com/hadolint/hadolint#configure
+        ignored:
+          - DL3008  # Pin versions in apt-get install
+          - DL3013  # Pin versions in pip install
+          - DL3016  # Pin versions in npm install
+        strict: false
+        trustedRegistries:
+          - docker.io
+          - ghcr.io
+        EOF

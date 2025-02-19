@@ -2,21 +2,21 @@
 ---
 version: "3"
 
-silent: true
-
 tasks:
+  default:
+    deps:
+      - task: install
+
   install:
-    desc: "Install aws-cli"
+    desc: "Install AWS CLI"
     run: once
     status:
       - command -v aws >/dev/null 2>&1
+    defer:
+      - rm -f awscliv2.zip
+      - rm -rf aws
     cmds:
-      - defer: rm -f awscliv2.zip
-      - defer: rm -rf aws
-      - |
-        sudo rm -rf /usr/local/aws-cli
-        curl -so "awscliv2.zip" "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"
-        unzip -qo awscliv2.zip
-        sudo ./aws/install -b /usr/local/bin -i /usr/local/aws-cli -u >/dev/null 2>&1
-        sudo chown root:root /usr/local/bin/aws
-        sudo chmod +x /usr/local/bin/aws
+      - curl -sLO "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o awscliv2.zip
+      - unzip -q awscliv2.zip
+      - sudo ./aws/install
+      - aws --version

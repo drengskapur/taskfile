@@ -4,39 +4,42 @@ version: "3"
 
 tasks:
   default:
-    desc: "Default DigitalOcean setup"
     deps:
-      - task: install:metrics-agent
+      - task: install
+
+  install:
+    desc: "Install DigitalOcean tools"
+    deps:
       - task: install:doctl
+      - task: install:metrics-agent
+
+  install:doctl:
+    desc: "Install doctl CLI"
+    vars:
+      LATEST_VERSION:
+        sh: curl -s https://api.github.com/repos/digitalocean/doctl/releases/latest | jq -r '.tag_name | sub("^v"; "")'
+      DOWNLOAD_URL: "https://github.com/digitalocean/doctl/releases/download/v{{.LATEST_VERSION}}/doctl-{{.LATEST_VERSION}}-linux-amd64.tar.gz"
+    run: once
+    status:
+      - command -v doctl >/dev/null 2>&1
+    defer:
+      - rm -f doctl.tar.gz
+    cmds:
+      - curl -sLO "{{.DOWNLOAD_URL}}" -o doctl.tar.gz
+      - tar xf doctl.tar.gz
+      - sudo mv doctl /usr/local/bin
+      - doctl version
 
   install:metrics-agent:
     desc: "Install Metrics Agent"
     run: once
+    defer:
+      - rm -f install.sh
     cmds:
-      - defer: rm install.sh
-      - curl -sSLO https://repos.insights.digitalocean.com/install.sh
+      - curl -sSL https://repos.insights.digitalocean.com/install.sh -o install.sh
       - sudo bash install.sh
 
-  install:doctl:
-    desc: "Install doctl"
-    run: once
-    status:
-      - command -v doctl >/dev/null 2>&1
-    vars:
-      LATEST_VERSION:
-        sh: |
-          curl -s https://api.github.com/repos/digitalocean/doctl/releases/latest | grep '"tag_name":' | sed -E 's/.*"tag_name": "v([^"]+)".*/\1/'
-      DOWNLOAD_URL: "https://github.com/digitalocean/doctl/releases/download/v{{.LATEST_VERSION}}/doctl-{{.LATEST_VERSION}}-linux-amd64.tar.gz"
-    cmds:
-      - defer: rm -f doctl-{{.LATEST_VERSION}}-linux-amd64.tar.gz
-      - curl -sLO "{{.DOWNLOAD_URL}}"
-      - tar -xzf doctl-{{.LATEST_VERSION}}-linux-amd64.tar.gz
-      - sudo mv doctl /usr/local/bin/doctl
-      - sudo chown root:root /usr/local/bin/doctl
-      - sudo chmod +x /usr/local/bin/doctl
-
   debug:cloudinit:
-    desc: "Debug Cloud Init"
-    run: once
+    desc: "Debug Cloud Init logs"
     cmds:
       - cat /var/log/cloud-init-output.log | grep userdata

@@ -2,13 +2,78 @@
 ---
 version: "3"
 
+silent: true
+
+vars:
+  INSTALL_TYPE: system  # Uses system package manager for Python installation
+  HOME:
+    sh: echo $HOME
+  SHELL:
+    sh: basename $SHELL
+  VENV: .venv
+  PYTHON: python3
+  PIP: pip3
+  USAGE: |-
+    Python3 - High-level programming language
+    Documentation: https://docs.python.org/3/
+
 tasks:
+  default:
+    deps:
+      - install
+
+  help:
+    desc: "Show information about Python3"
+    cmds:
+      - echo "{{.USAGE}}"
+
   install:
     desc: "Install Python3"
+    summary: Install Python3 and development tools on Ubuntu
     run: once
     status:
       - command -v python3 >/dev/null 2>&1
-      - command -v pip3 >/dev/null 2>&1
     cmds:
-      - sudo apt install -y python3
-      - python3 -m ensurepip
+      - sudo apt update
+      - sudo apt install -y python3 python3-pip python3-venv build-essential
+      - python3 -m pip install --user --upgrade pip setuptools wheel
+      - python3 --version
+      - pip3 --version
+
+  venv:create:
+    desc: "Create virtual environment"
+    summary: Setup isolated Python environment
+    status:
+      - test -d {{.VENV}}
+    cmds:
+      - python3 -m venv {{.VENV}}
+      - |
+        . {{.VENV}}/bin/activate
+        pip install --upgrade pip setuptools wheel
+
+  venv:activate:
+    desc: "Activate virtual environment"
+    cmds:
+      - echo "Run 'source {{.VENV}}/bin/activate' to activate the virtual environment"
+
+  deps:install:
+    desc: "Install dependencies"
+    summary: Install packages from requirements.txt
+    deps:
+      - venv:create
+    cmds:
+      - |
+        . {{.VENV}}/bin/activate
+        if [ -f "requirements.txt" ]; then
+          pip install -r requirements.txt
+        else
+          echo "No requirements.txt found"
+        fi
+
+  deps:freeze:
+    desc: "Freeze dependencies"
+    summary: Generate requirements.txt from current environment
+    cmds:
+      - |
+        . {{.VENV}}/bin/activate
+        pip freeze > requirements.txt

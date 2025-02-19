@@ -1,15 +1,111 @@
 # yaml-language-server: $schema=https://taskfile.dev/schema.json
+#
+# Helm Taskfile
+# ------------
+# Documentation: https://helm.sh/docs
+# Install Script: https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+#
+# Notes:
+# - Installs Helm globally with sudo
+# - Uses system-wide installation in /usr/local/bin
+# - No special dependencies required
 ---
 version: "3"
 
+silent: true
+
+vars:
+  INSTALL_TYPE: system  # Requires sudo for system-wide installation
+  HOME:
+    sh: echo $HOME
+  SHELL:
+    sh: basename $SHELL
+  SHELL_RC:
+    sh: >-
+      case "$(basename $SHELL)" in
+        bash) echo "$HOME/.bashrc" ;;
+        zsh)  echo "$HOME/.zshrc"  ;;
+        *)    echo ""              ;;
+      esac
+  USAGE: |-
+    Helm - The package manager for Kubernetes
+    Documentation: https://helm.sh/docs
+
 tasks:
+  default:
+    deps: [install]
+
+  help:
+    desc: "Show information about Helm"
+    cmds:
+      - echo "{{.USAGE}}"
+
   install:
-    desc: "Install helm"
+    desc: "Install Helm"
+    summary: Install Helm package manager with default configuration
     run: once
     status:
       - command -v helm >/dev/null 2>&1
+    defer:
+      - rm -f get_helm.sh
     cmds:
-      - defer: rm -f get_helm.sh
-      - curl -fsSLo get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+      - curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
       - chmod 700 get_helm.sh
       - ./get_helm.sh
+      - >-
+        case "{{.SHELL}}" in
+          bash)
+            echo "Installation complete! You may need to run 'source ~/.bashrc' or start a new shell session"
+            ;;
+          zsh)
+            echo "Installation complete! You may need to run 'source ~/.zshrc' or start a new shell session"
+            ;;
+          *)
+            echo "Installation complete! You may need to start a new shell session"
+            ;;
+        esac
+
+  repo:add:
+    desc: "Add a Helm repository"
+    cmds:
+      - helm repo add {{.CLI_ARGS}}
+
+  repo:update:
+    desc: "Update Helm repositories"
+    cmds:
+      - helm repo update
+
+  repo:list:
+    desc: "List Helm repositories"
+    cmds:
+      - helm repo list
+
+  search:
+    desc: "Search Helm charts"
+    cmds:
+      - helm search {{.CLI_ARGS}}
+
+  install:chart:
+    desc: "Install a Helm chart"
+    cmds:
+      - helm install {{.CLI_ARGS}}
+
+  upgrade:chart:
+    desc: "Upgrade a Helm release"
+    cmds:
+      - helm upgrade {{.CLI_ARGS}}
+
+  list:
+    desc: "List Helm releases"
+    cmds:
+      - helm list {{.CLI_ARGS}}
+
+  uninstall:
+    desc: "Uninstall a Helm release"
+    cmds:
+      - helm uninstall {{.CLI_ARGS}}
+
+  lint:
+    desc: "Lint a Helm chart"
+    cmds:
+      - helm lint {{.CLI_ARGS}}
