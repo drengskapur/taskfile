@@ -2,27 +2,49 @@
 ---
 version: "3"
 
-includes:
-  fnm: ../fnm/Taskfile.yml
-
-vars:
-  NODE_VERSION: lts-latest
-
 tasks:
+  default:
+    deps: 
+      - install
+
   install:
-    desc: Install Node.js using fnm
+    desc: "Install Node.js"
+    deps: 
+      - setup-deps
+    status:
+      - command -v node >/dev/null 2>&1
     cmds:
-      - task: fnm:install
+      - task: fnm-install
+      - task: fnm-install-node
 
-  run:
-    desc: Run a Node.js command
-    deps: [install]
+  setup-deps:
+    internal: true
+    desc: "Install Ubuntu dependencies"
+    status:
+      - command -v curl unzip >/dev/null 2>&1
     cmds:
-      - task: fnm:run
-        vars:
-          CLI_ARGS: "{{.CLI_ARGS}}"
+      - sudo apt update
+      - sudo apt install -y curl unzip
 
-  uninstall:
-    desc: Uninstall Node.js and fnm
+  fnm-install:
+    internal: true
+    desc: "Install fnm"
+    status:
+      - command -v fnm >/dev/null 2>&1
     cmds:
-      - task: fnm:uninstall
+      - curl -fsSL https://fnm.vercel.app/install | bash
+      - echo 'eval "$(fnm env --use-on-cd)"' >> $HOME/.bashrc
+
+  fnm-install-node:
+    internal: true
+    desc: "Install latest LTS Node.js"
+    cmds:
+      - source $HOME/.bashrc
+      - fnm install --lts
+      - fnm default lts-latest
+      - fnm use lts-latest
+
+  init:
+    desc: "Initialize a new Node.js project"
+    cmds:
+      - npm init -y
