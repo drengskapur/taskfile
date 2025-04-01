@@ -1,0 +1,50 @@
+version: '3'
+# Tasks for managing Digital Ocean CLI (doctl) setup and configuration
+tasks:
+  install:
+    run: once
+    status:
+      - command -v doctl >/dev/null 2>&1
+    vars:
+      LATEST_VERSION:
+        sh: |
+          curl -s https://api.github.com/repos/digitalocean/doctl/releases/latest | grep '"tag_name":' | sed -E 's/.*"tag_name": "v([^"]+)".*/\1/'
+      DOWNLOAD_URL: "https://github.com/digitalocean/doctl/releases/download/v{{.LATEST_VERSION}}/doctl-{{.LATEST_VERSION}}-linux-amd64.tar.gz"
+    cmds:
+      - defer: rm -f doctl-{{.LATEST_VERSION}}-linux-amd64.tar.gz
+      - curl -sLO "{{.DOWNLOAD_URL}}"
+      - tar -xzf doctl-{{.LATEST_VERSION}}-linux-amd64.tar.gz
+      - sudo mv doctl /usr/local/bin/doctl
+      - sudo chown root:root /usr/local/bin/doctl
+      - sudo chmod +x /usr/local/bin/doctl
+  auth:
+    desc: Authenticate with Digital Ocean
+    cmds:
+      - echo "Please have your Digital Ocean API token ready"
+      - doctl auth init
+      - doctl auth list
+  get-clusters:
+    desc: List all Kubernetes clusters
+    cmds:
+      - doctl kubernetes cluster list
+  setup-kubeconfig:
+    desc: Configure kubectl for the specified cluster
+    vars:
+      CLUSTER_NAME: '{{.CLI_ARGS | default "wraith"}}'
+    cmds:
+      - doctl kubernetes cluster kubeconfig save {{.CLUSTER_NAME}}
+      - kubectl get nodes
+  verify:
+    desc: Verify cluster connectivity and status
+    cmds:
+      - kubectl cluster-info
+      - kubectl get nodes
+      - kubectl get pods --all-namespaces
+  all:
+    desc: Run all setup steps in sequence
+    cmds:
+      - task: install
+      - task: auth
+      - task: get-clusters
+      - task: setup-kubeconfig
+      - task: verify

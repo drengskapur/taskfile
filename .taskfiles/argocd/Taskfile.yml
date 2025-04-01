@@ -1,0 +1,508 @@
+version: '3'
+
+# Global configuration
+output: prefixed
+silent: false
+
+# Variables that can be overridden via CLI
+vars:
+  ARGOCD_VERSION: stable
+  ARGOCD_NAMESPACE: argocd
+  ARGOCD_PORT: 8080
+  KUSTOMIZE_PATH: apps/argocd
+  FORCE_REINSTALL: "false"
+  SKIP_CLI_INSTALL: "false"
+  SKIP_PORT_FORWARD: "false"
+  TIMEOUT_WAIT_COMPONENTS: 300
+  TIMEOUT_WAIT_NAMESPACE: 120
+  TIMEOUT_WAIT_CRD: 90
+
+# Define all tasks
+tasks:
+  default:
+    desc: Install ArgoCD by default
+    deps: [install]
+
+  install:
+    desc: Install and configure ArgoCD for GitOps
+    deps: [check-prerequisites]
+    cmds:
+      - |
+        # Check if already installed
+        if kubectl get namespace "{{.ARGOCD_NAMESPACE}}" >/dev/null 2>&1 && kubectl get deployment argocd-server -n "{{.ARGOCD_NAMESPACE}}" >/dev/null 2>&1; then
+          # Get current version
+          image=$(kubectl get deployment argocd-server -n "{{.ARGOCD_NAMESPACE}}" -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null)
+          if [ -n "${image}" ]; then
+            # Extract version using grep
+            current_version=$(echo "${image}" | grep -o "v[0-9]\+\.[0-9]\+\.[0-9]\+" 2>/dev/null || echo "unknown")
+            echo "ArgoCD is already installed (version: ${current_version})"
+            
+            if [ "{{.FORCE_REINSTALL}}" = "false" ]; then
+              echo "ArgoCD is already installed. Use --force to reinstall."
+              exit 0
+            else
+              echo "Reinstalling ArgoCD as requested..."
+              task: uninstall
+            fi
+          fi
+        fi
+        
+        # Install process
+        task: install-cli
+        task: install-argocd-components
+        task: setup-port-forward
+        task: print-status
+
+  uninstall:
+    desc: Uninstall ArgoCD completely
+    cmds:
+      - task: stop-port-forward
+      - |
+        echo "Uninstalling ArgoCD from namespace {{.ARGOCD_NAMESPACE}}..."
+        if [ -d "{{.KUSTOMIZE_PATH}}" ] && [ -f "{{.KUSTOMIZE_PATH}}/kustomization.yaml" ]; then
+          echo "Using kustomize for uninstallation..."
+          if kubectl kustomize "{{.KUSTOMIZE_PATH}}" >/dev/null 2>&1; then
+            kubectl delete -k "{{.KUSTOMIZE_PATH}}"
+          elif command -v kustomize >/dev/null 2>&1; then
+            kustomize build "{{.KUSTOMIZE_PATH}}" | kubectl delete -f -
+          else
+            kubectl delete namespace "{{.ARGOCD_NAMESPACE}}" --ignore-not-found
+          fi
+        else
+          MANIFEST_URL=""
+          if [ "{{.ARGOCD_VERSION}}" = "latest" ]; then
+            MANIFEST_URL="https://raw.githubusercontent.com/argoproj/argo-cd/master/manifests/install.yaml"
+          elif [ "{{.ARGOCD_VERSION}}" = "stable" ]; then
+            STABLE_VERSION=$(curl -s https://api.github.com/repos/argoproj/argo-cd/releases | jq -r '[.[] | select(.prerelease == false)] | .[0].tag_name')
+            MANIFEST_URL="https://raw.githubusercontent.com/argoproj/argo-cd/${STABLE_VERSION}/manifests/install.yaml"
+          else
+            MANIFEST_URL="https://raw.githubusercontent.com/argoproj/argo-cd/{{.ARGOCD_VERSION}}/manifests/install.yaml"
+          fi
+          
+          echo "Using manifest from ${MANIFEST_URL} for uninstallation..."
+          curl -sSL "${MANIFEST_URL}" | kubectl delete -f -
+          
+          # Delete namespace if it still exists
+          kubectl delete namespace "{{.ARGOCD_NAMESPACE}}" --ignore-not-found
+        fi
+      - |
+        # Clean up CRDs if they exist
+        for crd in applications.argoproj.io applicationsets.argoproj.io appprojects.argoproj.io; do
+          kubectl delete crd "${crd}" --ignore-not-found
+        done
+      - |
+        # Wait for namespace deletion
+        if kubectl get namespace "{{.ARGOCD_NAMESPACE}}" >/dev/null 2>&1; then
+          echo "Waiting for namespace {{.ARGOCD_NAMESPACE}} to be deleted..."
+          max_wait={{.TIMEOUT_WAIT_NAMESPACE}}
+          elapsed=0
+          while kubectl get namespace "{{.ARGOCD_NAMESPACE}}" >/dev/null 2>&1 && [ $elapsed -lt $max_wait ]; do
+            sleep 2
+            elapsed=$((elapsed + 2))
+            echo -n "."
+            
+            # After 30 seconds try force deletion
+            if [ $elapsed -ge 30 ]; then
+              kubectl get namespace "{{.ARGOCD_NAMESPACE}}" -o json | jq '.spec.finalizers = null' | kubectl replace --raw "/api/v1/namespaces/{{.ARGOCD_NAMESPACE}}/finalize" -f - >/dev/null 2>&1 || true
+            fi
+          done
+          echo ""
+        fi
+      - |
+        # Wait for CRDs deletion
+        existing_crds=""
+        for crd in applications.argoproj.io applicationsets.argoproj.io appprojects.argoproj.io; do
+          if kubectl get crd "${crd}" >/dev/null 2>&1; then
+            existing_crds="${existing_crds} ${crd}"
+          fi
+        done
+        
+        if [ -n "${existing_crds}" ]; then
+          echo "Waiting for CRDs to be deleted: ${existing_crds}"
+          max_wait={{.TIMEOUT_WAIT_CRD}}
+          elapsed=0
+          while [ $elapsed -lt $max_wait ]; do
+            remaining=0
+            for crd in applications.argoproj.io applicationsets.argoproj.io appprojects.argoproj.io; do
+              if kubectl get crd "${crd}" >/dev/null 2>&1; then
+                remaining=$((remaining + 1))
+                # Try to remove finalizers
+                kubectl patch crd "${crd}" --type=merge -p '{"metadata":{"finalizers":[]}}' >/dev/null 2>&1 || true
+              fi
+            done
+            
+            if [ $remaining -eq 0 ]; then
+              break
+            fi
+            
+            sleep 2
+            elapsed=$((elapsed + 2))
+            echo -n "."
+          done
+          echo ""
+        fi
+      - |
+        # Clean up installation state
+        rm -f "${HOME}/.argocd-installation-state"
+        echo "ArgoCD has been uninstalled successfully."
+
+  restart-port-forward:
+    desc: Restart the port-forward for ArgoCD UI
+    cmds:
+      - task: stop-port-forward
+      - task: setup-port-forward
+      - echo "Port-forward restarted successfully."
+
+  status:
+    desc: Print current ArgoCD status
+    cmds:
+      - task: print-status
+
+  check-prerequisites:
+    desc: Check required tools and permissions
+    cmds:
+      - |
+        missing_tools=""
+        for tool in kubectl jq curl base64; do
+          if ! command -v ${tool} >/dev/null 2>&1; then
+            missing_tools="${missing_tools} ${tool}"
+          fi
+        done
+        
+        # Check for netstat or ss
+        if ! command -v netstat >/dev/null 2>&1 && ! command -v ss >/dev/null 2>&1; then
+          missing_tools="${missing_tools} netstat/ss"
+        fi
+        
+        if [ -n "${missing_tools}" ]; then
+          echo "ERROR: Missing required tools:${missing_tools}"
+          echo "ERROR: Please install these tools and try again."
+          exit 1
+        fi
+        
+        # Check Kubernetes connection
+        if ! kubectl cluster-info >/dev/null 2>&1; then
+          echo "ERROR: Cannot connect to Kubernetes cluster. Please check your kubeconfig and try again."
+          exit 1
+        fi
+        
+        # Check for cluster admin permissions
+        test_namespace="argocd-perm-test-$(date +%s)"
+        if ! kubectl create namespace "${test_namespace}" >/dev/null 2>&1; then
+          echo "ERROR: Insufficient Kubernetes permissions. Cluster admin access is required."
+          exit 1
+        else
+          kubectl delete namespace "${test_namespace}" --ignore-not-found >/dev/null 2>&1
+        fi
+        
+        echo "All prerequisites are met."
+
+  install-cli:
+    desc: Install ArgoCD CLI tool
+    cmds:
+      - |
+        if [ "{{.SKIP_CLI_INSTALL}}" = "true" ]; then
+          echo "Skipping ArgoCD CLI installation as requested."
+          exit 0
+        fi
+        
+        if ! command -v argocd >/dev/null 2>&1; then
+          echo "ArgoCD CLI not found, installing locally..."
+          
+          # Ensure local bin directory exists
+          mkdir -p "${HOME}/bin"
+          
+          # Add to PATH if not already there
+          if ! echo "${PATH}" | grep -q "${HOME}/bin"; then
+            echo 'export PATH="${HOME}/bin:${PATH}"' >> "${HOME}/.bashrc"
+            export PATH="${HOME}/bin:${PATH}"
+          fi
+          
+          # Get version to install
+          version_to_install=""
+          
+          if [ "{{.ARGOCD_VERSION}}" = "latest" ]; then
+            version_to_install=$(curl -s https://api.github.com/repos/argoproj/argo-cd/releases/latest | jq -r '.tag_name')
+            echo "Latest version is ${version_to_install}"
+          elif [ "{{.ARGOCD_VERSION}}" = "stable" ]; then
+            version_to_install=$(curl -s https://api.github.com/repos/argoproj/argo-cd/releases | jq -r '[.[] | select(.prerelease == false)] | .[0].tag_name')
+            echo "Stable version is ${version_to_install}"
+          elif echo "{{.ARGOCD_VERSION}}" | grep -q "^v[0-9]\+\.[0-9]\+\.[0-9]\+$"; then
+            version_to_install="{{.ARGOCD_VERSION}}"
+          else
+            echo "ERROR: Invalid version format: {{.ARGOCD_VERSION}}. Must be 'stable', 'latest', or format 'vX.Y.Z'."
+            exit 1
+          fi
+          
+          # Save CLI version to a file for future reference
+          echo "${version_to_install}" > "${HOME}/.argocd-cli-version"
+          
+          echo "Installing ArgoCD CLI version ${version_to_install} to ${HOME}/bin"
+          curl -sSL -o "${HOME}/bin/argocd" "https://github.com/argoproj/argo-cd/releases/download/${version_to_install}/argocd-linux-amd64"
+          chmod +x "${HOME}/bin/argocd"
+          echo "ArgoCD CLI installed successfully to ${HOME}/bin/argocd"
+        else
+          echo "ArgoCD CLI is already installed at $(command -v argocd)"
+          
+          # Update CLI if needed
+          if [ "{{.ARGOCD_VERSION}}" != "stable" ] && [ "{{.ARGOCD_VERSION}}" != "latest" ]; then
+            current_cli_version=$(argocd version --client 2>/dev/null | grep -o "v[0-9]\+\.[0-9]\+\.[0-9]\+" || echo "unknown")
+            
+            if [ "${current_cli_version}" != "{{.ARGOCD_VERSION}}" ]; then
+              echo "Updating ArgoCD CLI from ${current_cli_version} to {{.ARGOCD_VERSION}}..."
+              curl -sSL -o "${HOME}/bin/argocd" "https://github.com/argoproj/argo-cd/releases/download/{{.ARGOCD_VERSION}}/argocd-linux-amd64"
+              chmod +x "${HOME}/bin/argocd"
+              echo "{{.ARGOCD_VERSION}}" > "${HOME}/.argocd-cli-version"
+              echo "ArgoCD CLI updated successfully to {{.ARGOCD_VERSION}}"
+            fi
+          fi
+        fi
+
+  install-argocd-components:
+    desc: Install ArgoCD components
+    cmds:
+      - |
+        echo "Installing ArgoCD version {{.ARGOCD_VERSION}} in namespace {{.ARGOCD_NAMESPACE}}..."
+        
+        # Create namespace if it doesn't exist
+        kubectl create namespace "{{.ARGOCD_NAMESPACE}}" --dry-run=client -o yaml | kubectl apply -f -
+        
+        # Determine installation method
+        if [ -d "{{.KUSTOMIZE_PATH}}" ] && [ -f "{{.KUSTOMIZE_PATH}}/kustomization.yaml" ]; then
+          echo "Using kustomize for installation..."
+          
+          # Try kubectl's built-in kustomize first
+          if kubectl kustomize "{{.KUSTOMIZE_PATH}}" >/dev/null 2>&1; then
+            kubectl apply -k "{{.KUSTOMIZE_PATH}}"
+          elif command -v kustomize >/dev/null 2>&1; then
+            kustomize build "{{.KUSTOMIZE_PATH}}" | kubectl apply -f -
+          else
+            # Fall back to manifest installation
+            manifest_url=""
+            
+            if [ "{{.ARGOCD_VERSION}}" = "latest" ]; then
+              manifest_url="https://raw.githubusercontent.com/argoproj/argo-cd/master/manifests/install.yaml"
+            elif [ "{{.ARGOCD_VERSION}}" = "stable" ]; then
+              stable_version=$(curl -s https://api.github.com/repos/argoproj/argo-cd/releases | jq -r '[.[] | select(.prerelease == false)] | .[0].tag_name')
+              manifest_url="https://raw.githubusercontent.com/argoproj/argo-cd/${stable_version}/manifests/install.yaml"
+            else
+              manifest_url="https://raw.githubusercontent.com/argoproj/argo-cd/{{.ARGOCD_VERSION}}/manifests/install.yaml"
+            fi
+            
+            echo "Using manifest from ${manifest_url}"
+            curl -sSL "${manifest_url}" | sed "s/namespace: argocd/namespace: {{.ARGOCD_NAMESPACE}}/g" | kubectl apply -f -
+          fi
+        else
+          # Use manifest installation
+          manifest_url=""
+          
+          if [ "{{.ARGOCD_VERSION}}" = "latest" ]; then
+            manifest_url="https://raw.githubusercontent.com/argoproj/argo-cd/master/manifests/install.yaml"
+          elif [ "{{.ARGOCD_VERSION}}" = "stable" ]; then
+            stable_version=$(curl -s https://api.github.com/repos/argoproj/argo-cd/releases | jq -r '[.[] | select(.prerelease == false)] | .[0].tag_name')
+            manifest_url="https://raw.githubusercontent.com/argoproj/argo-cd/${stable_version}/manifests/install.yaml"
+          else
+            manifest_url="https://raw.githubusercontent.com/argoproj/argo-cd/{{.ARGOCD_VERSION}}/manifests/install.yaml"
+          fi
+          
+          echo "Using manifest from ${manifest_url}"
+          curl -sSL "${manifest_url}" | sed "s/namespace: argocd/namespace: {{.ARGOCD_NAMESPACE}}/g" | kubectl apply -f -
+        fi
+      - |
+        echo "Waiting for ArgoCD components to be ready..."
+        
+        components="statefulset/argocd-application-controller deployment/argocd-repo-server deployment/argocd-server deployment/argocd-redis"
+        
+        for component in ${components}; do
+          kind=${component%%/*}
+          name=${component##*/}
+          
+          echo "Waiting for ${name}..."
+          
+          if [ "${kind}" = "statefulset" ]; then
+            kubectl rollout status ${component} -n "{{.ARGOCD_NAMESPACE}}" --timeout={{.TIMEOUT_WAIT_COMPONENTS}}s || true
+          else
+            kubectl rollout status ${component} -n "{{.ARGOCD_NAMESPACE}}" --timeout={{.TIMEOUT_WAIT_COMPONENTS}}s || true
+          fi
+        done
+        
+        echo "All ArgoCD components are deployed!"
+      - |
+        # Save installation state
+        install_state_file="${HOME}/.argocd-installation-state"
+        cat > "${install_state_file}" << EOF
+        # ArgoCD installation state - $(date)
+        ARGOCD_VERSION="{{.ARGOCD_VERSION}}"
+        ARGOCD_NAMESPACE="{{.ARGOCD_NAMESPACE}}"
+        ARGOCD_PORT="{{.ARGOCD_PORT}}"
+        ARGOCD_INSTALL_DATE="$(date)"
+        EOF
+        echo "Installation state saved to ${install_state_file}"
+        echo "ArgoCD installation completed successfully!"
+
+  setup-port-forward:
+    desc: Set up port forwarding for the ArgoCD UI
+    cmds:
+      - |
+        if [ "{{.SKIP_PORT_FORWARD}}" = "true" ]; then
+          echo "Skipping port-forward setup as requested."
+          exit 0
+        fi
+        
+        echo "Setting up port-forwarding for ArgoCD UI on port {{.ARGOCD_PORT}}..."
+        
+        # Check if port is available
+        port_in_use=false
+        if command -v netstat >/dev/null 2>&1; then
+          if netstat -tuln | grep -q ":{{.ARGOCD_PORT}} "; then
+            port_in_use=true
+          fi
+        elif command -v ss >/dev/null 2>&1; then
+          if ss -tuln | grep -q ":{{.ARGOCD_PORT}} "; then
+            port_in_use=true
+          fi
+        fi
+        
+        if [ "${port_in_use}" = "true" ]; then
+          echo "ERROR: Port {{.ARGOCD_PORT}} is already in use. Please choose another port."
+          exit 1
+        fi
+        
+        # Create port-forward in background
+        kubectl port-forward svc/argocd-server -n "{{.ARGOCD_NAMESPACE}}" "{{.ARGOCD_PORT}}:443" --address=0.0.0.0 2>&1 &
+        port_forward_pid=$!
+        
+        # Wait briefly for port-forward to establish
+        sleep 2
+        
+        # Check if port-forward is running
+        if ! ps -p "${port_forward_pid}" >/dev/null 2>&1; then
+          echo "ERROR: Failed to establish port-forward. Please check the ArgoCD installation."
+          exit 1
+        fi
+        
+        echo "Port-forward established on port {{.ARGOCD_PORT}}. PID: ${port_forward_pid}"
+        echo "ArgoCD UI is now available at: https://localhost:{{.ARGOCD_PORT}}"
+        
+        # Save port-forward PID to file for cleanup
+        echo "${port_forward_pid}" > "${HOME}/.argocd-port-forward-pid"
+        
+        # Get initial admin password
+        admin_password=$(kubectl -n "{{.ARGOCD_NAMESPACE}}" get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" 2>/dev/null | base64 -d)
+        
+        if [ -n "${admin_password}" ]; then
+          echo "Initial admin credentials:"
+          echo "  Username: admin"
+          echo "  Password: ${admin_password}"
+          echo "  Command:  argocd login localhost:{{.ARGOCD_PORT}} --username admin --password ${admin_password} --insecure"
+        else
+          echo "Could not retrieve initial admin password. It may have been already changed."
+        fi
+
+  stop-port-forward:
+    desc: Stop port forwarding for the ArgoCD UI
+    cmds:
+      - |
+        port_forward_pid_file="${HOME}/.argocd-port-forward-pid"
+        
+        if [ -f "${port_forward_pid_file}" ]; then
+          port_forward_pid=$(cat "${port_forward_pid_file}")
+          
+          if ps -p "${port_forward_pid}" >/dev/null 2>&1; then
+            echo "Stopping ArgoCD port-forward (PID: ${port_forward_pid})..."
+            kill "${port_forward_pid}" 2>/dev/null || kill -9 "${port_forward_pid}" 2>/dev/null || true
+            echo "Port-forward stopped."
+          else
+            echo "No running port-forward found with PID ${port_forward_pid}."
+          fi
+          
+          # Remove PID file
+          rm -f "${port_forward_pid_file}"
+        else
+          echo "No port-forward PID file found."
+        fi
+
+  print-status:
+    desc: Print ArgoCD status information
+    cmds:
+      - |
+        echo "===== ArgoCD Status ====="
+        echo "Namespace: {{.ARGOCD_NAMESPACE}}"
+        
+        # Check if ArgoCD is installed
+        if ! kubectl get deployment argocd-server -n "{{.ARGOCD_NAMESPACE}}" >/dev/null 2>&1; then
+          echo "Status: Not installed or partially installed"
+          exit 0
+        fi
+        
+        # Get version
+        image=$(kubectl get deployment argocd-server -n "{{.ARGOCD_NAMESPACE}}" -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null)
+        if [ -n "${image}" ]; then
+          version=$(echo "${image}" | grep -o "v[0-9]\+\.[0-9]\+\.[0-9]\+" 2>/dev/null || echo "unknown")
+          echo "Version: ${version}"
+        else
+          echo "Version: Unknown"
+        fi
+        
+        # Check components status
+        echo "Components:"
+        components="deployment/argocd-server deployment/argocd-repo-server deployment/argocd-redis deployment/argocd-applicationset-controller statefulset/argocd-application-controller"
+        for component in ${components}; do
+          kind=${component%%/*}
+          name=${component##*/}
+          
+          if kubectl get "${component}" -n "{{.ARGOCD_NAMESPACE}}" >/dev/null 2>&1; then
+            if [ "${kind}" = "deployment" ]; then
+              ready=$(kubectl get "${component}" -n "{{.ARGOCD_NAMESPACE}}" -o jsonpath='{.status.readyReplicas}' 2>/dev/null || echo "0")
+              total=$(kubectl get "${component}" -n "{{.ARGOCD_NAMESPACE}}" -o jsonpath='{.status.replicas}' 2>/dev/null || echo "0")
+              echo "  - ${name}: ${ready}/${total} ready"
+            elif [ "${kind}" = "statefulset" ]; then
+              ready=$(kubectl get "${component}" -n "{{.ARGOCD_NAMESPACE}}" -o jsonpath='{.status.readyReplicas}' 2>/dev/null || echo "0")
+              total=$(kubectl get "${component}" -n "{{.ARGOCD_NAMESPACE}}" -o jsonpath='{.status.replicas}' 2>/dev/null || echo "0")
+              echo "  - ${name}: ${ready}/${total} ready"
+            fi
+          else
+            echo "  - ${name}: Not found"
+          fi
+        done
+        
+        # Check port-forward
+        port_forward_pid_file="${HOME}/.argocd-port-forward-pid"
+        if [ -f "${port_forward_pid_file}" ]; then
+          port_forward_pid=$(cat "${port_forward_pid_file}")
+          if ps -p "${port_forward_pid}" >/dev/null 2>&1; then
+            echo "Port-forward: Active on port {{.ARGOCD_PORT}} (PID: ${port_forward_pid})"
+            echo "UI available at: https://localhost:{{.ARGOCD_PORT}}"
+          else
+            echo "Port-forward: Inactive (process not running)"
+          fi
+        else
+          echo "Port-forward: Not configured"
+        fi
+        
+        # Check admin password
+        admin_password=$(kubectl -n "{{.ARGOCD_NAMESPACE}}" get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" 2>/dev/null | base64 -d)
+        if [ -n "${admin_password}" ]; then
+          echo "Admin password: Available (use the login command below)"
+          echo "Login command: argocd login localhost:{{.ARGOCD_PORT}} --username admin --password ${admin_password} --insecure"
+        else
+          echo "Admin password: Custom (initial password has been changed or removed)"
+        fi
+        
+        echo "======================="
+
+  save-config:
+    desc: Save current configuration as default for future runs
+    cmds:
+      - |
+        echo "Saving current configuration to ${HOME}/.argocd-install.conf"
+        cat > "${HOME}/.argocd-install.conf" << EOF
+        # ArgoCD installation configuration saved on $(date)
+        ARGOCD_VERSION="{{.ARGOCD_VERSION}}"
+        ARGOCD_NAMESPACE="{{.ARGOCD_NAMESPACE}}"
+        ARGOCD_PORT="{{.ARGOCD_PORT}}"
+        KUSTOMIZE_PATH="{{.KUSTOMIZE_PATH}}"
+        SKIP_CLI_INSTALL="{{.SKIP_CLI_INSTALL}}"
+        SKIP_PORT_FORWARD="{{.SKIP_PORT_FORWARD}}"
+        EOF
+        echo "Configuration saved successfully"

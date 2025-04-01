@@ -1,0 +1,19 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+silent: true
+tasks:
+  install:
+    run: once
+    vars:
+      LATEST_VERSION:
+        sh: >-
+          curl -s https://api.github.com/repos/kubernetes/minikube/releases/latest | grep '"tag_name":' | sed -E 's/.*"tag_name": "v([^"]+)".*/\1/'
+      DOWNLOAD_URL: "https://storage.googleapis.com/minikube/releases/v{{.LATEST_VERSION}}/minikube-linux-amd64"
+    status:
+      - command -v minikube
+    cmds:
+      - defer: rm -f minikube-linux-amd64
+      - |
+        curl -sLo minikube-linux-amd64 "{{.DOWNLOAD_URL}}"
+        sudo install minikube-linux-amd64 /usr/local/bin/minikube
+        echo "Minikube v{{.LATEST_VERSION}} installed successfully"
